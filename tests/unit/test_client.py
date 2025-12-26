@@ -182,12 +182,11 @@ def test_client_get_with_frequency_alignment(
     """Client aligns mixed frequencies when frequency parameter provided."""
     client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
 
-    # Mix daily and monthly data - should work with alignment
     df = client.get(
         ["TEST_DAILY", "TEST_MONTHLY"],
         start="2024-01-01",
         end="2024-03-31",
-        frequency="daily",
+        frequency="D",  # Changed from "daily"
     )
 
     assert isinstance(df, pd.DataFrame)
@@ -204,17 +203,15 @@ def test_client_get_frequency_alignment_upsample(
     """Client upsamples monthly data to daily frequency."""
     client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
 
-    # Fetch monthly data and align to daily
     df = client.get(
         ["TEST_MONTHLY"],
         start="2024-01-01",
         end="2024-03-31",
-        frequency="daily",
+        frequency="D",  # Changed from "daily"
     )
 
     assert isinstance(df, pd.DataFrame)
     assert "TEST_MONTHLY" in df.columns
-    # Daily alignment should have more rows than the ~3 monthly periods
     assert len(df) > 3
     assert isinstance(df.index, pd.DatetimeIndex)
 
@@ -226,17 +223,15 @@ def test_client_get_frequency_alignment_downsample(
     """Client downsamples daily data to monthly frequency."""
     client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
 
-    # Fetch daily data and align to monthly
     df = client.get(
         ["TEST_DAILY"],
         start="2024-01-01",
         end="2024-03-31",
-        frequency="monthly",
+        frequency="ME",  # Changed from "monthly"
     )
 
     assert isinstance(df, pd.DataFrame)
     assert "TEST_DAILY" in df.columns
-    # Monthly alignment should have ~3 rows for Jan-Mar
     assert len(df) == 3
     assert isinstance(df.index, pd.DatetimeIndex)
 
@@ -247,6 +242,48 @@ def test_client_get_unknown_symbol_raises(catalog_yaml: Path, cache_path: str) -
 
     with pytest.raises(SymbolNotFoundError, match="UNKNOWN"):
         client.get(["UNKNOWN"], start="2024-01-01", end="2024-01-10")
+
+
+def test_client_get_mixed_frequencies_warns(
+    catalog_yaml: Path,
+    cache_path: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Client.get() warns when mixing frequencies without alignment."""
+    import logging
+
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    with caplog.at_level(logging.WARNING):
+        df = client.get(
+            ["TEST_DAILY", "TEST_MONTHLY"],
+            start="2024-01-01",
+            end="2024-06-30",
+        )
+
+    # Should return data (not raise)
+    assert isinstance(df, pd.DataFrame)
+    assert "TEST_DAILY" in df.columns
+    assert "TEST_MONTHLY" in df.columns
+
+    # Should have logged a warning about index mismatch
+    assert any("index_mismatch" in record.message for record in caplog.records)
+
+
+def test_client_get_invalid_frequency_raises(
+    catalog_yaml: Path,
+    cache_path: str,
+) -> None:
+    """Client.get() raises ValueError for invalid pandas frequency string."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    with pytest.raises(ValueError):
+        client.get(
+            ["TEST_DAILY"],
+            start="2024-01-01",
+            end="2024-01-10",
+            frequency="INVALID_FREQ",
+        )
 
 
 # ============================================================================
@@ -375,6 +412,8 @@ def test_client_get_metadata(catalog_yaml: Path, cache_path: str) -> None:
     assert metadata["source"] == "mock"
     assert metadata["symbol"] == "MOCK_DAILY"
     assert metadata["description"] == "Test daily data"
+    # frequency is now inferred from source metadata
+    assert "frequency" in metadata
 
 
 def test_client_get_metadata_includes_source_info(

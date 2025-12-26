@@ -75,8 +75,9 @@ class Client:
         end : str
             End date in ISO format (YYYY-MM-DD).
         frequency : str | None, optional
-            Alignment frequency. If omitted, all symbols must have the same
-            native frequency.
+            Pandas frequency string for alignment (e.g., "D", "ME", "QE").
+            If omitted, data is returned as-is with a warning if indexes
+            don't align.
         use_cache : bool, optional
             Whether to use cached data. Default is True.
 
@@ -89,16 +90,14 @@ class Client:
         ------
         SymbolNotFoundError
             If any symbol is not in the catalog.
-        ValueError
-            If symbols have different frequencies and no alignment frequency
-            is specified.
         FetchError
             If data retrieval fails for any symbol.
+        ValueError
+            If frequency is an invalid pandas frequency string.
         """
         # Resolve entries (raises SymbolNotFoundError if not found)
         entries = [self._catalog.get(symbol) for symbol in symbols]
 
-        # Frequency alignment will be handled in processing module
         if frequency is not None:
             logger.info(
                 "frequency_alignment_requested: target=%s, symbols=%d",
@@ -113,7 +112,6 @@ class Client:
 
             # Apply frequency alignment if requested
             if frequency is not None:
-                # Lazy import to avoid circular imports
                 from metapyle.processing import align_to_frequency
 
                 logger.debug(
@@ -125,8 +123,50 @@ class Client:
 
             dfs[entry.my_name] = df
 
+        # Check index alignment if no frequency specified
+        if frequency is None:
+            self._check_index_alignment(dfs)
+
         # Assemble into wide DataFrame
         return self._assemble_dataframe(dfs)
+
+    def _check_index_alignment(self, dfs: dict[str, pd.DataFrame]) -> None:
+        """
+        Warn if series have misaligned indexes.
+
+        Parameters
+        ----------
+        dfs : dict[str, pd.DataFrame]
+            Dictionary mapping symbol names to DataFrames.
+        """
+        if len(dfs) <= 1:
+            return
+
+        # Infer frequency for each series
+        freqs = {name: pd.infer_freq(df.index) for name, df in dfs.items()}
+
+        # Check for mismatches
+        unique_freqs = set(freqs.values())
+
+        if len(unique_freqs) > 1:
+            # Different frequencies (including None for irregular)
+            freq_summary = ", ".join(
+                f"{name}={freq or 'irregular'}" for name, freq in freqs.items()
+            )
+            logger.warning(
+                "index_mismatch: Series have different frequencies: %s. "
+                "Outer join may produce NaN values. Consider specifying frequency parameter.",
+                freq_summary,
+            )
+        elif unique_freqs == {None}:
+            # All irregular — check if indexes actually match
+            indexes = list(dfs.values())
+            first_idx = indexes[0].index
+            if not all(df.index.equals(first_idx) for df in indexes[1:]):
+                logger.warning(
+                    "index_mismatch: Irregular series have different dates. "
+                    "Outer join may produce NaN values. Consider specifying frequency parameter.",
+                )
 
     def _fetch_symbol(
         self,
@@ -254,6 +294,8 @@ class Client:
         """
         Retrieve metadata for a catalog symbol.
 
+        Frequency is inferred from source metadata if available, otherwise None.
+
         Parameters
         ----------
         symbol : str
@@ -281,12 +323,16 @@ class Client:
             entry.source,
         )
 
+        # Infer frequency from source metadata or return None
+        inferred_freq = source_meta.get("frequency")
+
         # Combine with catalog info (catalog takes precedence)
         return {
             **source_meta,
             "my_name": entry.my_name,
             "source": entry.source,
             "symbol": entry.symbol,
+            "frequency": inferred_freq,
             "field": entry.field,
             "description": entry.description,
             "unit": entry.unit,

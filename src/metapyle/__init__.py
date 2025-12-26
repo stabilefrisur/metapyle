@@ -1,7 +1,9 @@
-"""Metapyle - A unified interface for querying financial time-series data."""
+"""Metapyle - Unified interface for financial time-series data."""
 
-from .client import Client
-from .exceptions import (
+__version__ = "0.1.0"
+
+from metapyle.client import Client
+from metapyle.exceptions import (
     CatalogError,
     CatalogValidationError,
     DuplicateNameError,
@@ -12,16 +14,20 @@ from .exceptions import (
     SymbolNotFoundError,
     UnknownSourceError,
 )
+from metapyle.sources import BaseSource, register_source
 
 __all__ = [
+    "__version__",
     "Client",
+    "BaseSource",
+    "register_source",
     "MetapyleError",
     "CatalogError",
-    "FetchError",
-    "FrequencyMismatchError",
     "CatalogValidationError",
     "DuplicateNameError",
-    "UnknownSourceError",
-    "SymbolNotFoundError",
+    "FetchError",
+    "FrequencyMismatchError",
     "NoDataError",
+    "SymbolNotFoundError",
+    "UnknownSourceError",
 ]

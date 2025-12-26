@@ -194,6 +194,72 @@ def test_client_get_frequency_mismatch_raises(
         )
 
 
+def test_client_get_with_frequency_alignment(
+    catalog_yaml: Path,
+    cache_path: str,
+) -> None:
+    """Client aligns mixed frequencies when frequency parameter provided."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    # Mix daily and monthly data - should work with alignment
+    df = client.get(
+        ["TEST_DAILY", "TEST_MONTHLY"],
+        start="2024-01-01",
+        end="2024-03-31",
+        frequency="daily",
+    )
+
+    assert isinstance(df, pd.DataFrame)
+    assert "TEST_DAILY" in df.columns
+    assert "TEST_MONTHLY" in df.columns
+    assert len(df) > 0
+    assert isinstance(df.index, pd.DatetimeIndex)
+
+
+def test_client_get_frequency_alignment_upsample(
+    catalog_yaml: Path,
+    cache_path: str,
+) -> None:
+    """Client upsamples monthly data to daily frequency."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    # Fetch monthly data and align to daily
+    df = client.get(
+        ["TEST_MONTHLY"],
+        start="2024-01-01",
+        end="2024-03-31",
+        frequency="daily",
+    )
+
+    assert isinstance(df, pd.DataFrame)
+    assert "TEST_MONTHLY" in df.columns
+    # Daily alignment should have more rows than the ~3 monthly periods
+    assert len(df) > 3
+    assert isinstance(df.index, pd.DatetimeIndex)
+
+
+def test_client_get_frequency_alignment_downsample(
+    catalog_yaml: Path,
+    cache_path: str,
+) -> None:
+    """Client downsamples daily data to monthly frequency."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    # Fetch daily data and align to monthly
+    df = client.get(
+        ["TEST_DAILY"],
+        start="2024-01-01",
+        end="2024-03-31",
+        frequency="monthly",
+    )
+
+    assert isinstance(df, pd.DataFrame)
+    assert "TEST_DAILY" in df.columns
+    # Monthly alignment should have ~3 rows for Jan-Mar
+    assert len(df) == 3
+    assert isinstance(df.index, pd.DatetimeIndex)
+
+
 def test_client_get_unknown_symbol_raises(catalog_yaml: Path, cache_path: str) -> None:
     """Client.get() raises SymbolNotFoundError for unknown symbol."""
     client = Client(catalog=str(catalog_yaml), cache_path=cache_path)

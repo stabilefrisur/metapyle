@@ -99,11 +99,30 @@ class Client:
         # Check frequency compatibility if no alignment specified
         if frequency is None:
             self._check_frequency_compatibility(entries)
+        else:
+            logger.info(
+                "frequency_alignment_requested: target=%s, symbols=%d",
+                frequency,
+                len(symbols),
+            )
 
         # Fetch data for each symbol
         dfs: dict[str, pd.DataFrame] = {}
         for entry in entries:
             df = self._fetch_symbol(entry, start, end, use_cache)
+
+            # Apply frequency alignment if requested
+            if frequency is not None:
+                # Lazy import to avoid circular imports
+                from metapyle.processing import align_to_frequency
+
+                logger.debug(
+                    "aligning_symbol: symbol=%s, target_frequency=%s",
+                    entry.my_name,
+                    frequency,
+                )
+                df = align_to_frequency(df, frequency)
+
             dfs[entry.my_name] = df
 
         # Assemble into wide DataFrame

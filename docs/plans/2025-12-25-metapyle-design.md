@@ -48,6 +48,12 @@ from metapyle import Client
 client = Client(catalog="catalogs/financial.yaml")
 client = Client(catalog=["catalogs/equities.yaml", "catalogs/macro.yaml"])
 
+# With custom cache path
+client = Client(catalog="catalogs/financial.yaml", cache_path="//server/shared/cache")
+
+# Disable caching entirely
+client = Client(catalog="catalogs/financial.yaml", cache_enabled=False)
+
 # Query by catalog names
 df = client.get(["GDP_US", "CPI_EU"], start="2020-01-01", end="2024-12-31")
 
@@ -58,8 +64,15 @@ df = client.get(["GDP_US", "SPX_CLOSE"], start="2020-01-01", frequency="daily")
 df = client.get_raw(source="bloomberg", symbol="SPX Index", field="PX_LAST", 
                      start="2020-01-01", end="2024-12-31")
 
+# Force fresh fetch (bypass cache)
+df = client.get(["GDP_US"], start="2020-01-01", end="2024-12-31", use_cache=False)
+
 # Retrieve metadata
 meta = client.get_metadata("GDP_US")
+
+# Cache management
+client.clear_cache()                    # Clear entire cache
+client.clear_cache(symbol="GDP_US")     # Clear specific symbol
 ```
 
 **Behaviors:**
@@ -216,6 +229,69 @@ Documentation and examples provided. No helper utilities (auth, retries, rate li
 - Adapters handle parsing and source-specific formatting
 - Client doesn't validate dates
 
+## Cache System
+
+Optional SQLite-based caching for fetched data. Reduces API calls for repeated queries.
+
+**Configuration:**
+
+Cache path resolution order:
+1. Constructor `cache_path` parameter (if provided)
+2. Environment variable `METAPYLE_CACHE_PATH` (if set)
+3. Default: `./cache/data_cache.db` (relative to current working directory)
+
+**Cache Behavior:**
+- Cache keys are `(source, symbol, field, start_date, end_date)`
+- Cache hit: Exact match or requested range is subset of cached range
+- Cache miss: Any other case → fresh API call, result stored in cache
+- No time-series stitching - superset-or-miss logic only
+- `use_cache=False`: Bypasses cache lookup, fetches fresh, overwrites existing cache entry
+- Both `get()` and `get_raw()` use the cache
+
+**Cache Invalidation:**
+- No automatic expiration (cache never auto-expires)
+- Manual clearing via `clear_cache()` or `clear_cache(symbol="...")`
+- Per-call bypass with `use_cache=False`
+
+**Storage Schema:**
+```sql
+CREATE TABLE cache_entries (
+    id INTEGER PRIMARY KEY,
+    source TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    field TEXT,                    -- NULL for sources without fields
+    start_date TEXT NOT NULL,      -- ISO format: 2020-01-01
+    end_date TEXT NOT NULL,
+    cached_at TEXT NOT NULL,       -- When it was cached
+    UNIQUE(source, symbol, field, start_date, end_date)
+);
+
+CREATE TABLE cache_data (
+    entry_id INTEGER NOT NULL,
+    date TEXT NOT NULL,            -- ISO format
+    value REAL NOT NULL,
+    FOREIGN KEY (entry_id) REFERENCES cache_entries(id) ON DELETE CASCADE,
+    PRIMARY KEY (entry_id, date)
+);
+
+CREATE INDEX idx_cache_lookup ON cache_entries(source, symbol, field);
+```
+
+**Cache keys use source identifiers, not `my_name`:**
+- Allows catalog renames without invalidating cache
+- `get_raw()` queries share cache with equivalent `get()` queries
+- Multiple catalog names pointing to same source data share cache
+
+**Failure Handling:**
+- Cache failures (corrupt DB, permissions, disk full) log a warning and proceed without cache
+- User gets their data; cache just doesn't help
+- Exception to fail-fast: cache is an optimization layer, not core functionality
+
+**Concurrency:**
+- SQLite default file locking
+- Reads are concurrent, writes serialized
+- Safe for shared network drives
+
 ## Error Handling
 
 Strict fail-fast approach throughout.
@@ -267,6 +343,7 @@ Hybrid approach: comprehensive unit tests + optional integration tests.
 - Client: Query logic, frequency checking, DataFrame assembly (mocked sources)
 - SourceRegistry: Registration, lookup
 - Processing: Alignment functions with synthetic data
+- Cache: Put/get operations, subset matching, clear operations, failure fallback
 - All external dependencies mocked
 - Target: 90%+ coverage
 
@@ -285,9 +362,11 @@ tests/
     test_client.py
     test_sources.py
     test_processing.py
+    test_cache.py
   integration/
     test_bloomberg_adapter.py
     test_localfile_adapter.py
+    test_cache_integration.py
     fixtures/
       test_data.csv
       test_data.parquet
@@ -300,6 +379,7 @@ src/metapyle/
   __init__.py              # Exports: Client, BaseSource, register_source, exceptions
   client.py                # Client class
   catalog.py               # Catalog, CatalogEntry dataclass
+  cache.py                 # Cache class, SQLite operations
   processing.py            # Alignment functions
   exceptions.py            # Exception hierarchy
   sources/
@@ -344,13 +424,12 @@ from metapyle import (
 
 ## Out of Scope
 
-- Caching/persistence
 - Authentication management (assumed configured externally)
 - Automatic retries or fallbacks
-- Database storage
 - Workflow orchestration
 - Real-time/streaming data
 - Data validation beyond outlier warnings
+- General-purpose caching (metapyle's cache is domain-specific for time-series data)
 
 ## Implementation Phases
 
@@ -358,6 +437,7 @@ from metapyle import (
 - Exception hierarchy
 - BaseSource ABC and SourceRegistry
 - Catalog dataclass and YAML loading
+- Cache class with SQLite storage
 - Basic Client with `get()` method (single frequency only)
 
 **Phase 2: Adapters**

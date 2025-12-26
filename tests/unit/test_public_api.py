@@ -30,6 +30,20 @@ def test_public_api_exports() -> None:
     assert UnknownSourceError is not None
 
 
+def test_frequency_mismatch_error_not_exported() -> None:
+    """FrequencyMismatchError should no longer be exported."""
+    import metapyle
+
+    assert not hasattr(metapyle, "FrequencyMismatchError")
+
+
+def test_frequency_enum_not_exported() -> None:
+    """Frequency enum should no longer be exported."""
+    import metapyle
+
+    assert not hasattr(metapyle, "Frequency")
+
+
 def test_version_available() -> None:
     """Package version should be available."""
     import metapyle

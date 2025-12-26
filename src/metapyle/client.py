@@ -8,7 +8,7 @@ import pandas as pd
 from metapyle.cache import Cache
 from metapyle.catalog import Catalog, CatalogEntry
 from metapyle.exceptions import FrequencyMismatchError
-from metapyle.sources.base import _global_registry
+from metapyle.sources.base import SourceRegistry, _global_registry
 
 __all__ = ["Client"]
 
@@ -44,7 +44,9 @@ class Client:
         cache_path: str | None = None,
         cache_enabled: bool = True,
     ) -> None:
+        self._registry: SourceRegistry = _global_registry
         self._catalog = Catalog.from_yaml(catalog)
+        self._catalog.validate_sources(self._registry)
         self._cache = Cache(path=cache_path, enabled=cache_enabled)
 
         logger.info(
@@ -198,7 +200,7 @@ class Client:
                 return cached
 
         # Fetch from source
-        source = _global_registry.get(entry.source)
+        source = self._registry.get(entry.source)
 
         # Build kwargs for source
         kwargs: dict[str, str] = {}
@@ -296,7 +298,7 @@ class Client:
             If symbol not in catalog.
         """
         entry = self._catalog.get(symbol)
-        source = _global_registry.get(entry.source)
+        source = self._registry.get(entry.source)
 
         # Get source-specific metadata
         source_meta = source.get_metadata(entry.symbol)
@@ -375,7 +377,7 @@ class Client:
                 return cached
 
         # Fetch from source
-        source_adapter = _global_registry.get(source)
+        source_adapter = self._registry.get(source)
         kwargs: dict[str, str] = {}
         if field is not None:
             kwargs["field"] = field

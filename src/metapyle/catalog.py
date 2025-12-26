@@ -4,7 +4,10 @@ import logging
 from dataclasses import dataclass
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
+
+if TYPE_CHECKING:
+    from metapyle.sources.base import SourceRegistry
 
 import yaml
 
@@ -178,3 +181,29 @@ class Catalog:
     def __contains__(self, name: str) -> bool:
         """Check if a name exists in the catalog."""
         return name in self._entries
+
+    def validate_sources(self, registry: "SourceRegistry") -> None:
+        """
+        Validate that all catalog sources are registered.
+
+        Parameters
+        ----------
+        registry : SourceRegistry
+            Source registry to validate against.
+
+        Raises
+        ------
+        UnknownSourceError
+            If any catalog entry references an unregistered source.
+        """
+        from metapyle.exceptions import UnknownSourceError
+
+        registered = set(registry.list_sources())
+        catalog_sources = {entry.source for entry in self._entries.values()}
+
+        unknown = catalog_sources - registered
+        if unknown:
+            raise UnknownSourceError(
+                f"Unknown source(s) in catalog: {', '.join(sorted(unknown))}. "
+                f"Registered sources: {', '.join(sorted(registered))}"
+            )

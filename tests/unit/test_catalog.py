@@ -9,7 +9,9 @@ from metapyle.exceptions import (
     CatalogValidationError,
     DuplicateNameError,
     SymbolNotFoundError,
+    UnknownSourceError,
 )
+from metapyle.sources.base import SourceRegistry
 
 
 def test_frequency_enum_values() -> None:
@@ -306,3 +308,49 @@ def test_catalog_malformed_yaml(tmp_path: Path) -> None:
 
     with pytest.raises(CatalogValidationError, match="YAML"):
         Catalog.from_yaml(str(yaml_file))
+
+
+# ============================================================================
+# Catalog Source Validation Tests
+# ============================================================================
+
+
+def test_catalog_validate_sources() -> None:
+    """Catalog raises UnknownSourceError for unregistered sources."""
+    entry = CatalogEntry(
+        my_name="GDP_US",
+        source="unknown_source",
+        symbol="GDP CUR$ Index",
+        frequency=Frequency.QUARTERLY,
+    )
+    catalog = Catalog({"GDP_US": entry})
+
+    registry = SourceRegistry()
+    registry.register("bloomberg", type)  # Register a different source
+
+    with pytest.raises(UnknownSourceError, match="unknown_source"):
+        catalog.validate_sources(registry)
+
+
+def test_catalog_validate_sources_success() -> None:
+    """Catalog validation passes when all sources are registered."""
+    entry1 = CatalogEntry(
+        my_name="GDP_US",
+        source="bloomberg",
+        symbol="GDP CUR$ Index",
+        frequency=Frequency.QUARTERLY,
+    )
+    entry2 = CatalogEntry(
+        my_name="LOCAL_DATA",
+        source="localfile",
+        symbol="/data/local.csv",
+        frequency=Frequency.DAILY,
+    )
+    catalog = Catalog({"GDP_US": entry1, "LOCAL_DATA": entry2})
+
+    registry = SourceRegistry()
+    registry.register("bloomberg", type)
+    registry.register("localfile", type)
+
+    # Should not raise
+    catalog.validate_sources(registry)

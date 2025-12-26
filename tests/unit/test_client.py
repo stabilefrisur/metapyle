@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from metapyle.client import Client
-from metapyle.exceptions import FrequencyMismatchError, SymbolNotFoundError
+from metapyle.exceptions import FrequencyMismatchError, SymbolNotFoundError, UnknownSourceError
 from metapyle.sources.base import BaseSource, register_source
 
 # ============================================================================
@@ -427,3 +427,72 @@ def test_client_get_metadata_unknown_symbol_raises(
 
     with pytest.raises(SymbolNotFoundError, match="UNKNOWN"):
         client.get_metadata("UNKNOWN")
+
+
+# ============================================================================
+# Client.get_raw() Tests
+# ============================================================================
+
+
+def test_client_get_raw(catalog_yaml: Path, cache_path: str) -> None:
+    """Client.get_raw() fetches data directly from source, bypassing catalog."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    df = client.get_raw(
+        source="mock",
+        symbol="RAW_SYMBOL",
+        start="2024-01-01",
+        end="2024-01-10",
+    )
+
+    assert isinstance(df, pd.DataFrame)
+    assert "value" in df.columns
+    assert len(df) > 0
+    assert isinstance(df.index, pd.DatetimeIndex)
+
+
+def test_client_get_raw_uses_cache(catalog_yaml: Path, cache_path: str) -> None:
+    """Client.get_raw() uses cache for subsequent requests."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    # First fetch - should populate cache
+    df1 = client.get_raw(
+        source="mock",
+        symbol="RAW_CACHED",
+        start="2024-01-01",
+        end="2024-01-10",
+    )
+
+    # Manually check cache has data
+    cached = client._cache.get(
+        source="mock",
+        symbol="RAW_CACHED",
+        field=None,
+        start_date="2024-01-01",
+        end_date="2024-01-10",
+    )
+    assert cached is not None
+
+    # Second fetch - should use cache
+    df2 = client.get_raw(
+        source="mock",
+        symbol="RAW_CACHED",
+        start="2024-01-01",
+        end="2024-01-10",
+    )
+
+    # Compare values (ignore index frequency metadata which may differ after parquet)
+    pd.testing.assert_frame_equal(df1, df2, check_freq=False)
+
+
+def test_client_get_raw_unknown_source(catalog_yaml: Path, cache_path: str) -> None:
+    """Client.get_raw() raises UnknownSourceError for invalid source."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    with pytest.raises(UnknownSourceError, match="nonexistent_source"):
+        client.get_raw(
+            source="nonexistent_source",
+            symbol="ANY",
+            start="2024-01-01",
+            end="2024-01-10",
+        )

@@ -318,3 +318,80 @@ class Client:
             "description": entry.description,
             "unit": entry.unit,
         }
+
+    def get_raw(
+        self,
+        source: str,
+        symbol: str,
+        start: str,
+        end: str,
+        *,
+        field: str | None = None,
+        use_cache: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Fetch data directly from a source, bypassing the catalog.
+
+        Useful for ad-hoc queries or testing new data series.
+
+        Parameters
+        ----------
+        source : str
+            Name of registered source adapter.
+        symbol : str
+            Source-specific symbol identifier.
+        start : str
+            Start date in ISO format (YYYY-MM-DD).
+        end : str
+            End date in ISO format (YYYY-MM-DD).
+        field : str | None, optional
+            Source-specific field (e.g., "PX_LAST" for Bloomberg).
+        use_cache : bool, optional
+            If False, bypass cache. Default True.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with DatetimeIndex and 'value' column.
+
+        Raises
+        ------
+        UnknownSourceError
+            If source is not registered.
+        FetchError
+            If data retrieval fails.
+        """
+        # Try cache first
+        if use_cache:
+            cached = self._cache.get(
+                source=source,
+                symbol=symbol,
+                field=field,
+                start_date=start,
+                end_date=end,
+            )
+            if cached is not None:
+                logger.debug("get_raw_from_cache: source=%s, symbol=%s", source, symbol)
+                return cached
+
+        # Fetch from source
+        source_adapter = _global_registry.get(source)
+        kwargs: dict[str, str] = {}
+        if field is not None:
+            kwargs["field"] = field
+
+        logger.debug("get_raw_from_source: source=%s, symbol=%s", source, symbol)
+        df = source_adapter.fetch(symbol, start, end, **kwargs)
+
+        # Store in cache
+        if use_cache:
+            self._cache.put(
+                source=source,
+                symbol=symbol,
+                field=field,
+                start_date=start,
+                end_date=end,
+                data=df,
+            )
+
+        return df

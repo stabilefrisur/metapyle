@@ -1,0 +1,388 @@
+"""Cache with SQLite storage for time-series data."""
+
+import io
+import logging
+import os
+import sqlite3
+from pathlib import Path
+
+import pandas as pd
+
+__all__ = ["Cache"]
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_CACHE_PATH = "./cache/data_cache.db"
+
+
+class Cache:
+    """
+    Cache for time-series data with SQLite storage.
+
+    Uses two tables:
+    - cache_entries: metadata about cached data (source, symbol, field, date range)
+    - cache_data: the actual DataFrame data in Parquet format
+
+    Parameters
+    ----------
+    path : str | None, optional
+        Path to SQLite database file. If None, uses METAPYLE_CACHE_PATH
+        environment variable or defaults to "./cache/data_cache.db".
+    enabled : bool, optional
+        Whether caching is enabled. If False, put() is a no-op and get()
+        always returns None. Default is True.
+    """
+
+    def __init__(
+        self,
+        path: str | None = None,
+        *,
+        enabled: bool = True,
+    ) -> None:
+        self._enabled = enabled
+        self._conn: sqlite3.Connection | None = None
+
+        if not enabled:
+            logger.debug("cache_disabled")
+            return
+
+        if path is None:
+            path = os.environ.get("METAPYLE_CACHE_PATH", DEFAULT_CACHE_PATH)
+
+        self._path = path
+        self._initialize_database()
+
+    def _initialize_database(self) -> None:
+        """Create database and tables if they don't exist."""
+        # Ensure parent directory exists
+        db_path = Path(self._path)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        self._conn = sqlite3.connect(self._path)
+
+        # Create cache_entries table for metadata
+        self._conn.execute("""
+            CREATE TABLE IF NOT EXISTS cache_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                field TEXT,
+                start_date TEXT NOT NULL,
+                end_date TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(source, symbol, field, start_date, end_date)
+            )
+        """)
+
+        # Create cache_data table for storing DataFrame as blob
+        self._conn.execute("""
+            CREATE TABLE IF NOT EXISTS cache_data (
+                entry_id INTEGER PRIMARY KEY,
+                data BLOB NOT NULL,
+                FOREIGN KEY (entry_id) REFERENCES cache_entries(id)
+                    ON DELETE CASCADE
+            )
+        """)
+
+        # Create index for faster lookups
+        self._conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_cache_lookup
+            ON cache_entries(source, symbol, field)
+        """)
+
+        self._conn.commit()
+        logger.info("cache_initialized: path=%s", self._path)
+
+    def put(
+        self,
+        source: str,
+        symbol: str,
+        field: str | None,
+        start_date: str,
+        end_date: str,
+        data: pd.DataFrame,
+    ) -> None:
+        """
+        Store DataFrame in cache.
+
+        Parameters
+        ----------
+        source : str
+            Data source name.
+        symbol : str
+            Source-specific symbol.
+        field : str | None
+            Field name (can be None for sources without fields).
+        start_date : str
+            Start date in ISO format (YYYY-MM-DD).
+        end_date : str
+            End date in ISO format (YYYY-MM-DD).
+        data : pd.DataFrame
+            DataFrame to cache.
+        """
+        if not self._enabled:
+            return
+
+        if self._conn is None:
+            return
+
+        try:
+            # Serialize DataFrame to Parquet bytes
+            data_bytes = data.to_parquet()
+
+            # Delete existing entry if present (for overwrite)
+            self._delete_entry(source, symbol, field, start_date, end_date)
+
+            # Insert new entry
+            cursor = self._conn.execute(
+                """
+                INSERT INTO cache_entries (source, symbol, field, start_date, end_date)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (source, symbol, field, start_date, end_date),
+            )
+            entry_id = cursor.lastrowid
+
+            # Insert data
+            self._conn.execute(
+                """
+                INSERT INTO cache_data (entry_id, data)
+                VALUES (?, ?)
+                """,
+                (entry_id, data_bytes),
+            )
+
+            self._conn.commit()
+            logger.debug(
+                "cache_put: source=%s, symbol=%s, field=%s, range=%s/%s",
+                source,
+                symbol,
+                field,
+                start_date,
+                end_date,
+            )
+        except Exception:
+            logger.warning(
+                "cache_put_failed: source=%s, symbol=%s, field=%s, range=%s/%s",
+                source,
+                symbol,
+                field,
+                start_date,
+                end_date,
+                exc_info=True,
+            )
+
+    def get(
+        self,
+        source: str,
+        symbol: str,
+        field: str | None,
+        start_date: str,
+        end_date: str,
+    ) -> pd.DataFrame | None:
+        """
+        Retrieve DataFrame from cache.
+
+        Returns data if requested range is a subset of a cached range.
+
+        Parameters
+        ----------
+        source : str
+            Data source name.
+        symbol : str
+            Source-specific symbol.
+        field : str | None
+            Field name (can be None for sources without fields).
+        start_date : str
+            Start date in ISO format (YYYY-MM-DD).
+        end_date : str
+            End date in ISO format (YYYY-MM-DD).
+
+        Returns
+        -------
+        pd.DataFrame | None
+            Cached DataFrame if found, None otherwise.
+        """
+        if not self._enabled:
+            return None
+
+        if self._conn is None:
+            return None
+
+        try:
+            # Find a cached entry that covers the requested range
+            # field can be None, so we need special handling
+            if field is None:
+                cursor = self._conn.execute(
+                    """
+                    SELECT ce.id, ce.start_date, ce.end_date, cd.data
+                    FROM cache_entries ce
+                    JOIN cache_data cd ON cd.entry_id = ce.id
+                    WHERE ce.source = ?
+                      AND ce.symbol = ?
+                      AND ce.field IS NULL
+                      AND ce.start_date <= ?
+                      AND ce.end_date >= ?
+                    """,
+                    (source, symbol, start_date, end_date),
+                )
+            else:
+                cursor = self._conn.execute(
+                    """
+                    SELECT ce.id, ce.start_date, ce.end_date, cd.data
+                    FROM cache_entries ce
+                    JOIN cache_data cd ON cd.entry_id = ce.id
+                    WHERE ce.source = ?
+                      AND ce.symbol = ?
+                      AND ce.field = ?
+                      AND ce.start_date <= ?
+                      AND ce.end_date >= ?
+                    """,
+                    (source, symbol, field, start_date, end_date),
+                )
+
+            row = cursor.fetchone()
+            if row is None:
+                logger.debug(
+                    "cache_miss: source=%s, symbol=%s, field=%s, range=%s/%s",
+                    source,
+                    symbol,
+                    field,
+                    start_date,
+                    end_date,
+                )
+                return None
+
+            _, cached_start, cached_end, data_bytes = row
+
+            # Deserialize DataFrame
+            df = pd.read_parquet(io.BytesIO(data_bytes))
+
+            # If requested range is subset, filter the data
+            if start_date != cached_start or end_date != cached_end:
+                # Filter to requested range
+                start_dt = pd.Timestamp(start_date)
+                end_dt = pd.Timestamp(end_date)
+                df = df[(df.index >= start_dt) & (df.index <= end_dt)]
+
+            logger.debug(
+                "cache_hit: source=%s, symbol=%s, field=%s, range=%s/%s",
+                source,
+                symbol,
+                field,
+                start_date,
+                end_date,
+            )
+            return df
+        except Exception:
+            logger.warning(
+                "cache_get_failed: source=%s, symbol=%s, field=%s, range=%s/%s",
+                source,
+                symbol,
+                field,
+                start_date,
+                end_date,
+                exc_info=True,
+            )
+            return None
+
+    def clear(
+        self,
+        source: str | None = None,
+        symbol: str | None = None,
+    ) -> None:
+        """
+        Clear cache entries.
+
+        If source and symbol are provided, only clears entries matching both.
+        Otherwise, clears all entries.
+
+        Parameters
+        ----------
+        source : str | None, optional
+            Data source name to clear.
+        symbol : str | None, optional
+            Symbol to clear. Must be provided with source.
+        """
+        if not self._enabled:
+            return
+
+        if self._conn is None:
+            return
+
+        if source is not None and symbol is not None:
+            # Get entry IDs to delete
+            cursor = self._conn.execute(
+                """
+                SELECT id FROM cache_entries
+                WHERE source = ? AND symbol = ?
+                """,
+                (source, symbol),
+            )
+            entry_ids = [row[0] for row in cursor.fetchall()]
+
+            if entry_ids:
+                # Delete data first (foreign key constraint)
+                placeholders = ",".join("?" * len(entry_ids))
+                self._conn.execute(
+                    f"DELETE FROM cache_data WHERE entry_id IN ({placeholders})",
+                    entry_ids,
+                )
+                self._conn.execute(
+                    f"DELETE FROM cache_entries WHERE id IN ({placeholders})",
+                    entry_ids,
+                )
+
+            logger.info("cache_cleared: source=%s, symbol=%s", source, symbol)
+        else:
+            # Clear all
+            self._conn.execute("DELETE FROM cache_data")
+            self._conn.execute("DELETE FROM cache_entries")
+            logger.info("cache_cleared: all entries")
+
+        self._conn.commit()
+
+    def close(self) -> None:
+        """Close the database connection."""
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
+            logger.debug("cache_closed")
+
+    def _delete_entry(
+        self,
+        source: str,
+        symbol: str,
+        field: str | None,
+        start_date: str,
+        end_date: str,
+    ) -> None:
+        """Delete a specific cache entry if it exists."""
+        if self._conn is None:
+            return
+
+        # Get entry ID
+        if field is None:
+            cursor = self._conn.execute(
+                """
+                SELECT id FROM cache_entries
+                WHERE source = ? AND symbol = ? AND field IS NULL
+                  AND start_date = ? AND end_date = ?
+                """,
+                (source, symbol, start_date, end_date),
+            )
+        else:
+            cursor = self._conn.execute(
+                """
+                SELECT id FROM cache_entries
+                WHERE source = ? AND symbol = ? AND field = ?
+                  AND start_date = ? AND end_date = ?
+                """,
+                (source, symbol, field, start_date, end_date),
+            )
+
+        row = cursor.fetchone()
+        if row is not None:
+            entry_id = row[0]
+            self._conn.execute("DELETE FROM cache_data WHERE entry_id = ?", (entry_id,))
+            self._conn.execute("DELETE FROM cache_entries WHERE id = ?", (entry_id,))

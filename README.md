@@ -1,92 +1,66 @@
 # Metapyle
 
-Unified interface for querying financial time-series data from multiple sources using human-readable catalog names.
+[![PyPI](https://img.shields.io/pypi/v/metapyle)](https://pypi.org/project/metapyle/)
+[![Python](https://img.shields.io/pypi/pyversions/metapyle)](https://pypi.org/project/metapyle/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Features
+> **Early-stage research framework** — Not for production use.
 
-- **Catalog-based queries**: Use human-readable names instead of source-specific symbols
-- **Multi-source support**: Bloomberg (xbbg), local files (CSV/Parquet), and custom adapters
-- **Fail-fast error handling**: No partial results, immediate actionable errors
-- **Optional caching**: SQLite-based cache to reduce redundant API calls
-- **Frequency alignment**: Automatic upsampling/downsampling with explicit control
-- **Type-safe**: Full type hints with mypy support
+A unified interface for querying financial time-series data from multiple sources.
+
+Requires Python 3.12+
+
+## Overview
+
+Financial data lives in many places—Bloomberg terminals, internal APIs, CSV exports—each with its own ticker syntax, authentication, and quirks. Metapyle provides a YAML-based catalog that maps human-readable names to source-specific details, giving you a single `client.get()` interface regardless of where the data comes from.
+
+Currently supports Bloomberg (via xbbg) and local files (CSV/Parquet).
 
 ## Installation
 
 ```bash
-# Core functionality
-pip install metapyle
+uv add metapyle[bloomberg]
+```
 
-# With Bloomberg support
+Or with pip:
+
+```bash
 pip install metapyle[bloomberg]
 ```
 
+> **Note:** Bloomberg support requires a Bloomberg Terminal running on your machine.
+
 ## Quick Start
 
-```python
-from metapyle import Client
-
-# Initialize with catalog
-client = Client(catalog="catalogs/financial.yaml")
-
-# Query data by catalog names
-df = client.get(["GDP_US", "CPI_EU"], start="2020-01-01", end="2024-12-31")
-
-# Ad-hoc queries bypassing catalog
-df = client.get_raw(
-    source="bloomberg",
-    symbol="SPX Index",
-    field="PX_LAST",
-    start="2020-01-01",
-    end="2024-12-31"
-)
-```
-
-## Catalog Example
+**1. Create a catalog file (`catalog.yaml`):**
 
 ```yaml
-- my_name: GDP_US
-  source: bloomberg
-  symbol: GDP CUR$ Index
-  frequency: quarterly
-  description: US Gross Domestic Product
-  unit: USD billions
-
-- my_name: SPX_CLOSE
+- my_name: sp500_close
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
   frequency: daily
 ```
 
-## Development
+**2. Query data:**
 
-```bash
-# Install development dependencies
-pip install -e ".[dev,bloomberg]"
+```python
+from metapyle import Client
 
-# Run tests
-pytest                        # Unit tests only
-pytest -m integration         # Integration tests (requires credentials)
-
-# Type checking
-mypy src/metapyle
-
-# Linting and formatting
-ruff check src/ tests/
-ruff format src/ tests/
+with Client(catalog="catalog.yaml") as client:
+    df = client.get(["sp500_close"], start="2024-01-01", end="2024-12-31")
 ```
-
-## Requirements
-
-- Python 3.12+
-- pandas >= 2.0.0
-- pyyaml >= 6.0
 
 ## Documentation
 
-See [docs/plans/2025-12-25-metapyle-design.md](docs/plans/2025-12-25-metapyle-design.md) for detailed design documentation.
+See the [User Guide](docs/user-guide.md) for complete documentation, including:
+
+- Catalog configuration
+- Frequency alignment
+- Caching
+- Available data sources
+- Error handling
 
 ## License
 
-[Add license information]
+MIT License - see [LICENSE](LICENSE) for details.

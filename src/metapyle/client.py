@@ -1,6 +1,7 @@
 """Client for querying financial time-series data."""
 
 import logging
+from typing import Any
 
 import pandas as pd
 
@@ -274,3 +275,46 @@ class Client:
         else:
             self._cache.clear()
             logger.info("cache_cleared: all")
+
+    def get_metadata(self, symbol: str) -> dict[str, Any]:
+        """
+        Retrieve metadata for a catalog symbol.
+
+        Parameters
+        ----------
+        symbol : str
+            Catalog name.
+
+        Returns
+        -------
+        dict[str, Any]
+            Combined metadata from catalog entry and source adapter.
+
+        Raises
+        ------
+        SymbolNotFoundError
+            If symbol not in catalog.
+        """
+        entry = self._catalog.get(symbol)
+        source = _global_registry.get(entry.source)
+
+        # Get source-specific metadata
+        source_meta = source.get_metadata(entry.symbol)
+
+        logger.debug(
+            "get_metadata: symbol=%s, source=%s",
+            symbol,
+            entry.source,
+        )
+
+        # Combine with catalog info (catalog takes precedence)
+        return {
+            **source_meta,
+            "my_name": entry.my_name,
+            "source": entry.source,
+            "symbol": entry.symbol,
+            "frequency": entry.frequency.value,
+            "field": entry.field,
+            "description": entry.description,
+            "unit": entry.unit,
+        }

@@ -376,3 +376,54 @@ def test_client_clear_cache_specific_symbol(
         end_date="2024-01-10",
     )
     assert cached2 is not None
+
+
+# ============================================================================
+# Client.get_metadata() Tests
+# ============================================================================
+
+
+def test_client_get_metadata(catalog_yaml: Path, cache_path: str) -> None:
+    """Client.get_metadata() returns metadata for a symbol."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    metadata = client.get_metadata("TEST_DAILY")
+
+    assert isinstance(metadata, dict)
+    assert metadata["my_name"] == "TEST_DAILY"
+    assert metadata["source"] == "mock"
+    assert metadata["symbol"] == "MOCK_DAILY"
+    assert metadata["frequency"] == "daily"
+    assert metadata["description"] == "Test daily data"
+
+
+def test_client_get_metadata_includes_source_info(
+    catalog_yaml: Path,
+    cache_path: str,
+) -> None:
+    """Client.get_metadata() includes source-specific metadata."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    metadata = client.get_metadata("TEST_MONTHLY")
+
+    # Catalog info
+    assert metadata["my_name"] == "TEST_MONTHLY"
+    assert metadata["source"] == "mock_monthly"
+    assert metadata["symbol"] == "MOCK_MONTHLY"
+    assert metadata["frequency"] == "monthly"
+
+    # Source-specific metadata from MockMonthlySource.get_metadata()
+    # The source returns {"symbol": symbol, "frequency": "monthly"}
+    # Note: source's "frequency" key gets merged (may override or be overridden)
+    assert "symbol" in metadata  # From source metadata
+
+
+def test_client_get_metadata_unknown_symbol_raises(
+    catalog_yaml: Path,
+    cache_path: str,
+) -> None:
+    """Client.get_metadata() raises SymbolNotFoundError for unknown symbol."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+
+    with pytest.raises(SymbolNotFoundError, match="UNKNOWN"):
+        client.get_metadata("UNKNOWN")

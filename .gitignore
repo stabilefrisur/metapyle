@@ -29,4 +29,6 @@ dmypy.json
 # Ruff
 .ruff_cache/
 
-.github/
+# GitHub directory (except copilot instructions)
+.github/*
+!.github/copilot-instructions.md

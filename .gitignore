@@ -33,3 +33,6 @@ dmypy.json
 # GitHub directory (except copilot instructions)
 .github/*
 !.github/copilot-instructions.md
+
+# Git worktrees
+.worktrees/

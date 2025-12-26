@@ -496,3 +496,21 @@ def test_client_get_raw_unknown_source(catalog_yaml: Path, cache_path: str) -> N
             start="2024-01-01",
             end="2024-01-10",
         )
+
+
+def test_client_context_manager(catalog_yaml: Path, cache_path: str) -> None:
+    """Client can be used as a context manager."""
+    with Client(catalog=str(catalog_yaml), cache_path=cache_path) as client:
+        df = client.get(["TEST_DAILY"], start="2024-01-01", end="2024-01-10")
+        assert len(df) > 0
+
+    # After context exit, cache should be closed
+    # (no assertion needed - just verify it doesn't raise)
+
+
+def test_client_close(catalog_yaml: Path, cache_path: str) -> None:
+    """Client.close() closes the cache connection."""
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+    client.close()
+    # Calling close again should not raise
+    client.close()

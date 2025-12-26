@@ -1,7 +1,7 @@
 """Client for querying financial time-series data."""
 
 import logging
-from typing import Any
+from typing import Any, Self
 
 import pandas as pd
 
@@ -397,3 +397,29 @@ class Client:
             )
 
         return df
+
+    def close(self) -> None:
+        """
+        Close the cache connection.
+
+        Should be called when the client is no longer needed to release
+        database resources. Alternatively, use the client as a context manager.
+
+        Examples
+        --------
+        >>> client = Client(catalog="catalog.yaml")
+        >>> try:
+        ...     df = client.get(["GDP"], start="2020-01-01", end="2024-12-31")
+        ... finally:
+        ...     client.close()
+        """
+        self._cache.close()
+        logger.debug("client_closed")
+
+    def __enter__(self) -> Self:
+        """Enter context manager."""
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        """Exit context manager, closing cache connection."""
+        self.close()

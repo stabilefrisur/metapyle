@@ -167,11 +167,24 @@ from metapyle.sources import register_source, BaseSource
 class BloombergSource(BaseSource):
     def fetch(self, symbol, start, end, field="PX_LAST", **kwargs):
         from xbbg import blp
+        
+        # blp.bdh returns DataFrame with MultiIndex columns: (ticker, field)
+        # Example: df.columns = MultiIndex([('SPX Index', 'PX_LAST')])
         df = blp.bdh(symbol, field, start, end)
-        return df.rename(columns={field: 'value'})
+        
+        # Handle empty result
+        if df.empty:
+            raise NoDataError(f"No data returned for {symbol}")
+        
+        # Extract single column, flatten MultiIndex, rename to 'value'
+        # df[(symbol, field)] extracts the series for this ticker/field combo
+        result = df[(symbol, field)].to_frame(name='value')
+        return result
     
     def get_metadata(self, symbol):
-        # Could call Bloomberg reference data if needed
+        # Optional: use blp.bdp for reference data
+        # from xbbg import blp
+        # df = blp.bdp(symbol, ['Security_Name', 'GICS_Sector_Name'])
         return {}
 
 @register_source("localfile")
@@ -183,6 +196,10 @@ class LocalFileSource(BaseSource):
         else:
             df = pd.read_csv(symbol, index_col=0, parse_dates=True)
         
+        # Handle empty result
+        if df.empty:
+            raise NoDataError(f"No data in file {symbol}")
+        
         # Expect datetime index, single value column
         return df.loc[start:end].rename(columns={df.columns[0]: 'value'})
     
@@ -190,8 +207,36 @@ class LocalFileSource(BaseSource):
         return {}
 ```
 
+**xbbg API Reference:**
+
+The `bloomberg` adapter uses xbbg's `blp.bdh()` for historical data:
+
+```python
+from xbbg import blp
+
+# blp.bdh() signature:
+df = blp.bdh(
+    tickers='SPX Index',          # Single ticker or list
+    flds='PX_LAST',               # Single field or list (default: PX_LAST)
+    start_date='2020-01-01',      # ISO format or '20200101'
+    end_date='2024-12-31',
+    adjust='all',                 # Optional: 'all' (dividends+splits), '-' (none)
+)
+
+# Returns DataFrame with:
+# - DatetimeIndex
+# - MultiIndex columns: (ticker, field)
+#
+#                SPX Index
+#                  PX_LAST
+# 2020-01-02      3257.85
+# 2020-01-03      3234.85
+```
+
+**Date format:** Metapyle uses ISO format (`'2020-01-01'`). xbbg accepts both ISO and compact (`'20200101'`).
+
 **Built-in Adapters:**
-- `bloomberg` - Uses xbbg for Desktop Terminal COM access
+- `bloomberg` - Uses xbbg for Desktop Terminal COM access (requires Terminal running)
 - `localfile` - Reads CSV/Parquet with datetime index
 
 **User Extension:**

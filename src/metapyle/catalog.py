@@ -2,7 +2,6 @@
 
 import logging
 from dataclasses import dataclass
-from enum import StrEnum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
 
@@ -17,19 +16,9 @@ from metapyle.exceptions import (
     SymbolNotFoundError,
 )
 
-__all__ = ["Catalog", "CatalogEntry", "Frequency"]
+__all__ = ["Catalog", "CatalogEntry"]
 
 logger = logging.getLogger(__name__)
-
-
-class Frequency(StrEnum):
-    """Supported data frequencies."""
-
-    DAILY = auto()
-    WEEKLY = auto()
-    MONTHLY = auto()
-    QUARTERLY = auto()
-    ANNUAL = auto()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -45,8 +34,6 @@ class CatalogEntry:
         Name of the registered source adapter (e.g., "bloomberg").
     symbol : str
         Source-specific identifier (e.g., "SPX Index").
-    frequency : Frequency
-        Data frequency (daily, weekly, monthly, quarterly, annual).
     field : str | None, optional
         Source-specific field name (e.g., "PX_LAST" for Bloomberg).
     description : str | None, optional
@@ -58,7 +45,6 @@ class CatalogEntry:
     my_name: str
     source: str
     symbol: str
-    frequency: Frequency
     field: str | None = None
     description: str | None = None
     unit: str | None = None
@@ -135,26 +121,16 @@ class Catalog:
     @staticmethod
     def _parse_entry(raw: dict[str, Any], source_file: str) -> CatalogEntry:
         """Parse a raw dictionary into a CatalogEntry."""
-        required_fields = ["my_name", "source", "symbol", "frequency"]
+        required_fields = ["my_name", "source", "symbol"]
 
         for field in required_fields:
             if field not in raw:
                 raise CatalogValidationError(f"Missing required field '{field}' in {source_file}")
 
-        freq_str = raw["frequency"].lower()
-        try:
-            frequency = Frequency(freq_str)
-        except ValueError as e:
-            valid = ", ".join(f.value for f in Frequency)
-            raise CatalogValidationError(
-                f"Invalid frequency '{freq_str}' in {source_file}. Valid values: {valid}"
-            ) from e
-
         return CatalogEntry(
             my_name=raw["my_name"],
             source=raw["source"],
             symbol=raw["symbol"],
-            frequency=frequency,
             field=raw.get("field"),
             description=raw.get("description"),
             unit=raw.get("unit"),

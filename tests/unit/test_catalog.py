@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from metapyle.catalog import Catalog, CatalogEntry, Frequency
+from metapyle.catalog import Catalog, CatalogEntry
 from metapyle.exceptions import (
     CatalogValidationError,
     DuplicateNameError,
@@ -14,33 +14,17 @@ from metapyle.exceptions import (
 from metapyle.sources.base import SourceRegistry
 
 
-def test_frequency_enum_values() -> None:
-    """Frequency enum should have expected values."""
-    assert Frequency.DAILY.value == "daily"
-    assert Frequency.WEEKLY.value == "weekly"
-    assert Frequency.MONTHLY.value == "monthly"
-    assert Frequency.QUARTERLY.value == "quarterly"
-    assert Frequency.ANNUAL.value == "annual"
-
-
-def test_frequency_is_str_enum() -> None:
-    """Frequency values should be usable as strings."""
-    assert f"frequency is {Frequency.DAILY}" == "frequency is daily"
-
-
 def test_catalog_entry_required_fields() -> None:
-    """CatalogEntry requires my_name, source, symbol, frequency."""
+    """CatalogEntry requires my_name, source, symbol."""
     entry = CatalogEntry(
         my_name="GDP_US",
         source="bloomberg",
         symbol="GDP CUR$ Index",
-        frequency=Frequency.QUARTERLY,
     )
 
     assert entry.my_name == "GDP_US"
     assert entry.source == "bloomberg"
     assert entry.symbol == "GDP CUR$ Index"
-    assert entry.frequency == Frequency.QUARTERLY
 
 
 def test_catalog_entry_optional_fields_default_none() -> None:
@@ -49,7 +33,6 @@ def test_catalog_entry_optional_fields_default_none() -> None:
         my_name="GDP_US",
         source="bloomberg",
         symbol="GDP CUR$ Index",
-        frequency=Frequency.QUARTERLY,
     )
 
     assert entry.field is None
@@ -63,7 +46,6 @@ def test_catalog_entry_with_optional_fields() -> None:
         my_name="SPX_CLOSE",
         source="bloomberg",
         symbol="SPX Index",
-        frequency=Frequency.DAILY,
         field="PX_LAST",
         description="S&P 500 closing price",
         unit="points",
@@ -80,7 +62,6 @@ def test_catalog_entry_is_frozen() -> None:
         my_name="GDP_US",
         source="bloomberg",
         symbol="GDP CUR$ Index",
-        frequency=Frequency.QUARTERLY,
     )
 
     with pytest.raises(AttributeError):
@@ -89,22 +70,18 @@ def test_catalog_entry_is_frozen() -> None:
 
 def test_catalog_entry_is_keyword_only() -> None:
     """CatalogEntry must use keyword arguments."""
-    # This should work (keyword arguments)
     entry = CatalogEntry(
         my_name="GDP_US",
         source="bloomberg",
         symbol="GDP CUR$ Index",
-        frequency=Frequency.QUARTERLY,
     )
     assert entry.my_name == "GDP_US"
 
-    # Positional arguments should fail
     with pytest.raises(TypeError):
         CatalogEntry(  # type: ignore[misc]
             "GDP_US",
             "bloomberg",
             "GDP CUR$ Index",
-            Frequency.QUARTERLY,
         )
 
 
@@ -114,10 +91,8 @@ def test_catalog_entry_uses_slots() -> None:
         my_name="GDP_US",
         source="bloomberg",
         symbol="GDP CUR$ Index",
-        frequency=Frequency.QUARTERLY,
     )
 
-    # Slots-based classes don't have __dict__
     assert not hasattr(entry, "__dict__")
 
 
@@ -132,14 +107,12 @@ def test_catalog_load_from_yaml(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
-  frequency: quarterly
   description: US GDP
 
 - my_name: SPX_CLOSE
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
-  frequency: daily
 """
     yaml_file = tmp_path / "catalog.yaml"
     yaml_file.write_text(yaml_content)
@@ -152,12 +125,10 @@ def test_catalog_load_from_yaml(tmp_path: Path) -> None:
 
     gdp = catalog.get("GDP_US")
     assert gdp.source == "bloomberg"
-    assert gdp.frequency == Frequency.QUARTERLY
     assert gdp.description == "US GDP"
 
     spx = catalog.get("SPX_CLOSE")
     assert spx.field == "PX_LAST"
-    assert spx.frequency == Frequency.DAILY
 
 
 def test_catalog_load_missing_required_field(tmp_path: Path) -> None:
@@ -165,27 +136,12 @@ def test_catalog_load_missing_required_field(tmp_path: Path) -> None:
     yaml_content = """
 - my_name: GDP_US
   source: bloomberg
-  # missing symbol and frequency
+  # missing symbol
 """
     yaml_file = tmp_path / "catalog.yaml"
     yaml_file.write_text(yaml_content)
 
     with pytest.raises(CatalogValidationError, match="symbol"):
-        Catalog.from_yaml(str(yaml_file))
-
-
-def test_catalog_load_invalid_frequency(tmp_path: Path) -> None:
-    """Catalog raises CatalogValidationError for invalid frequency."""
-    yaml_content = """
-- my_name: GDP_US
-  source: bloomberg
-  symbol: GDP CUR$ Index
-  frequency: biweekly
-"""
-    yaml_file = tmp_path / "catalog.yaml"
-    yaml_file.write_text(yaml_content)
-
-    with pytest.raises(CatalogValidationError, match="frequency"):
         Catalog.from_yaml(str(yaml_file))
 
 
@@ -195,12 +151,10 @@ def test_catalog_load_duplicate_names(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
-  frequency: quarterly
 
 - my_name: GDP_US
   source: localfile
   symbol: /data/gdp.csv
-  frequency: quarterly
 """
     yaml_file = tmp_path / "catalog.yaml"
     yaml_file.write_text(yaml_content)
@@ -215,13 +169,11 @@ def test_catalog_load_multiple_files(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
-  frequency: quarterly
 """
     yaml2 = """
 - my_name: SPX_CLOSE
   source: bloomberg
   symbol: SPX Index
-  frequency: daily
 """
     file1 = tmp_path / "catalog1.yaml"
     file2 = tmp_path / "catalog2.yaml"
@@ -241,13 +193,11 @@ def test_catalog_load_duplicate_across_files(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
-  frequency: quarterly
 """
     yaml2 = """
 - my_name: GDP_US
   source: localfile
   symbol: /data/gdp.csv
-  frequency: quarterly
 """
     file1 = tmp_path / "catalog1.yaml"
     file2 = tmp_path / "catalog2.yaml"
@@ -272,12 +222,10 @@ def test_catalog_list_names(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
-  frequency: quarterly
 
 - my_name: SPX_CLOSE
   source: bloomberg
   symbol: SPX Index
-  frequency: daily
 """
     yaml_file = tmp_path / "catalog.yaml"
     yaml_file.write_text(yaml_content)
@@ -300,7 +248,6 @@ def test_catalog_malformed_yaml(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
-  frequency: quarterly
   bad_key: [unclosed bracket
 """
     yaml_file = tmp_path / "catalog.yaml"
@@ -321,12 +268,11 @@ def test_catalog_validate_sources() -> None:
         my_name="GDP_US",
         source="unknown_source",
         symbol="GDP CUR$ Index",
-        frequency=Frequency.QUARTERLY,
     )
     catalog = Catalog({"GDP_US": entry})
 
     registry = SourceRegistry()
-    registry.register("bloomberg", type)  # Register a different source
+    registry.register("bloomberg", type)
 
     with pytest.raises(UnknownSourceError, match="unknown_source"):
         catalog.validate_sources(registry)
@@ -338,13 +284,11 @@ def test_catalog_validate_sources_success() -> None:
         my_name="GDP_US",
         source="bloomberg",
         symbol="GDP CUR$ Index",
-        frequency=Frequency.QUARTERLY,
     )
     entry2 = CatalogEntry(
         my_name="LOCAL_DATA",
         source="localfile",
         symbol="/data/local.csv",
-        frequency=Frequency.DAILY,
     )
     catalog = Catalog({"GDP_US": entry1, "LOCAL_DATA": entry2})
 
@@ -352,5 +296,4 @@ def test_catalog_validate_sources_success() -> None:
     registry.register("bloomberg", type)
     registry.register("localfile", type)
 
-    # Should not raise
     catalog.validate_sources(registry)

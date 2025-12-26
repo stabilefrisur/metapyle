@@ -98,10 +98,8 @@ class Client:
         # Resolve entries (raises SymbolNotFoundError if not found)
         entries = [self._catalog.get(symbol) for symbol in symbols]
 
-        # Check frequency compatibility if no alignment specified
-        if frequency is None:
-            self._check_frequency_compatibility(entries)
-        else:
+        # Frequency alignment will be handled in processing module
+        if frequency is not None:
             logger.info(
                 "frequency_alignment_requested: target=%s, symbols=%d",
                 frequency,
@@ -129,31 +127,6 @@ class Client:
 
         # Assemble into wide DataFrame
         return self._assemble_dataframe(dfs)
-
-    def _check_frequency_compatibility(self, entries: list[CatalogEntry]) -> None:
-        """
-        Check that all entries have the same frequency.
-
-        Parameters
-        ----------
-        entries : list[CatalogEntry]
-            List of catalog entries to check.
-
-        Raises
-        ------
-        ValueError
-            If entries have different frequencies.
-        """
-        if len(entries) <= 1:
-            return
-
-        frequencies = {entry.frequency for entry in entries}
-        if len(frequencies) > 1:
-            freq_list = ", ".join(f"{entry.my_name}={entry.frequency}" for entry in entries)
-            raise ValueError(
-                f"Symbols have different frequencies: {freq_list}. "
-                "Specify a frequency parameter for alignment."
-            )
 
     def _fetch_symbol(
         self,
@@ -314,7 +287,6 @@ class Client:
             "my_name": entry.my_name,
             "source": entry.source,
             "symbol": entry.symbol,
-            "frequency": entry.frequency.value,
             "field": entry.field,
             "description": entry.description,
             "unit": entry.unit,

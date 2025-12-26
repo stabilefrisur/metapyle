@@ -4,19 +4,12 @@ import logging
 
 import pandas as pd
 
-from metapyle.catalog import Frequency
-
 __all__ = ["FREQUENCY_MAP", "align_to_frequency", "get_pandas_frequency"]
 
 logger = logging.getLogger(__name__)
 
 
-FREQUENCY_MAP: dict[str | Frequency, str] = {
-    Frequency.DAILY: "D",
-    Frequency.WEEKLY: "W",
-    Frequency.MONTHLY: "ME",
-    Frequency.QUARTERLY: "QE",
-    Frequency.ANNUAL: "YE",
+FREQUENCY_MAP: dict[str, str] = {
     "daily": "D",
     "weekly": "W",
     "monthly": "ME",
@@ -25,15 +18,14 @@ FREQUENCY_MAP: dict[str | Frequency, str] = {
 }
 
 
-def get_pandas_frequency(frequency: Frequency | str) -> str:
+def get_pandas_frequency(frequency: str) -> str:
     """
-    Map a Frequency enum or string to a pandas frequency string.
+    Map a frequency string to a pandas frequency string.
 
     Parameters
     ----------
-    frequency : Frequency | str
-        The frequency to map. Can be a Frequency enum member or a lowercase
-        string like "daily", "weekly", etc.
+    frequency : str
+        The frequency to map. A lowercase string like "daily", "weekly", etc.
 
     Returns
     -------
@@ -47,7 +39,7 @@ def get_pandas_frequency(frequency: Frequency | str) -> str:
 
     Examples
     --------
-    >>> get_pandas_frequency(Frequency.DAILY)
+    >>> get_pandas_frequency("daily")
     'D'
     >>> get_pandas_frequency("monthly")
     'ME'
@@ -63,7 +55,7 @@ def get_pandas_frequency(frequency: Frequency | str) -> str:
 
 def align_to_frequency(
     df: pd.DataFrame,
-    target_frequency: Frequency | str,
+    target_frequency: str,
 ) -> pd.DataFrame:
     """
     Resample a DataFrame to a target frequency.
@@ -75,8 +67,8 @@ def align_to_frequency(
     ----------
     df : pd.DataFrame
         DataFrame with a DatetimeIndex to resample.
-    target_frequency : Frequency | str
-        Target frequency for alignment.
+    target_frequency : str
+        Target frequency for alignment (e.g., "daily", "monthly").
 
     Returns
     -------
@@ -93,7 +85,7 @@ def align_to_frequency(
     >>> import pandas as pd
     >>> dates = pd.date_range("2024-01-01", periods=90, freq="D")
     >>> df = pd.DataFrame({"value": range(90)}, index=dates)
-    >>> aligned = align_to_frequency(df, Frequency.MONTHLY)
+    >>> aligned = align_to_frequency(df, "monthly")
     >>> len(aligned)
     3
     """

@@ -3,20 +3,10 @@
 import pandas as pd
 import pytest
 
-from metapyle.catalog import Frequency
 from metapyle.processing import FREQUENCY_MAP, align_to_frequency, get_pandas_frequency
 
 
 def test_get_pandas_frequency_mapping() -> None:
-    """get_pandas_frequency maps Frequency enum values correctly."""
-    assert get_pandas_frequency(Frequency.DAILY) == "D"
-    assert get_pandas_frequency(Frequency.WEEKLY) == "W"
-    assert get_pandas_frequency(Frequency.MONTHLY) == "ME"
-    assert get_pandas_frequency(Frequency.QUARTERLY) == "QE"
-    assert get_pandas_frequency(Frequency.ANNUAL) == "YE"
-
-
-def test_get_pandas_frequency_from_string() -> None:
     """get_pandas_frequency maps string values correctly."""
     assert get_pandas_frequency("daily") == "D"
     assert get_pandas_frequency("weekly") == "W"
@@ -36,7 +26,7 @@ def test_align_to_frequency_downsample() -> None:
     dates = pd.date_range("2024-01-01", periods=90, freq="D")
     df = pd.DataFrame({"value": range(90)}, index=dates)
 
-    result = align_to_frequency(df, Frequency.MONTHLY)
+    result = align_to_frequency(df, "monthly")
 
     # Should have 3 months: Jan, Feb, Mar
     assert len(result) == 3
@@ -58,7 +48,7 @@ def test_align_to_frequency_upsample() -> None:
     dates = pd.date_range("2024-01-31", periods=3, freq="ME")
     df = pd.DataFrame({"value": [100, 200, 300]}, index=dates)
 
-    result = align_to_frequency(df, Frequency.DAILY)
+    result = align_to_frequency(df, "daily")
 
     # First day should be Jan 31 with value 100
     assert result.iloc[0]["value"] == 100
@@ -80,7 +70,7 @@ def test_align_to_frequency_no_change() -> None:
     dates = pd.date_range("2024-01-31", periods=3, freq="ME")
     df = pd.DataFrame({"value": [100, 200, 300]}, index=dates)
 
-    result = align_to_frequency(df, Frequency.MONTHLY)
+    result = align_to_frequency(df, "monthly")
 
     # Same number of rows
     assert len(result) == 3
@@ -94,7 +84,7 @@ def test_align_to_frequency_quarterly_to_daily() -> None:
     dates = pd.date_range("2024-03-31", periods=2, freq="QE")
     df = pd.DataFrame({"value": [1000, 2000]}, index=dates)
 
-    result = align_to_frequency(df, Frequency.DAILY)
+    result = align_to_frequency(df, "daily")
 
     # Q1 2024 ends Mar 31, Q2 ends Jun 30
     # Should have daily data from Mar 31 to Jun 30
@@ -111,7 +101,7 @@ def test_align_to_frequency_quarterly_to_daily() -> None:
 
 
 def test_frequency_map_completeness() -> None:
-    """FREQUENCY_MAP contains all Frequency enum values and string equivalents."""
-    for freq in Frequency:
+    """FREQUENCY_MAP contains all expected frequency strings."""
+    expected = ["daily", "weekly", "monthly", "quarterly", "annual"]
+    for freq in expected:
         assert freq in FREQUENCY_MAP
-        assert freq.value in FREQUENCY_MAP

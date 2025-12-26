@@ -64,19 +64,16 @@ def catalog_yaml(tmp_path: Path) -> Path:
 - my_name: TEST_DAILY
   source: mock
   symbol: MOCK_DAILY
-  frequency: daily
   description: Test daily data
 
 - my_name: TEST_DAILY_2
   source: mock
   symbol: MOCK_DAILY_2
-  frequency: daily
   description: Another test daily data
 
 - my_name: TEST_MONTHLY
   source: mock_monthly
   symbol: MOCK_MONTHLY
-  frequency: monthly
   description: Test monthly data
 """
     yaml_file = tmp_path / "catalog.yaml"
@@ -91,7 +88,6 @@ def catalog_yaml_2(tmp_path: Path) -> Path:
 - my_name: TEST_DAILY_3
   source: mock
   symbol: MOCK_DAILY_3
-  frequency: daily
   description: Third test daily data
 """
     yaml_file = tmp_path / "catalog2.yaml"
@@ -177,21 +173,6 @@ def test_client_get_multiple_symbols_same_frequency(
     assert "TEST_DAILY" in df.columns
     assert "TEST_DAILY_2" in df.columns
     assert len(df) > 0
-
-
-def test_client_get_frequency_mismatch_raises(
-    catalog_yaml: Path,
-    cache_path: str,
-) -> None:
-    """Client.get() raises ValueError for different frequencies without alignment."""
-    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
-
-    with pytest.raises(ValueError, match="frequency"):
-        client.get(
-            ["TEST_DAILY", "TEST_MONTHLY"],
-            start="2024-01-01",
-            end="2024-06-30",
-        )
 
 
 def test_client_get_with_frequency_alignment(
@@ -393,7 +374,6 @@ def test_client_get_metadata(catalog_yaml: Path, cache_path: str) -> None:
     assert metadata["my_name"] == "TEST_DAILY"
     assert metadata["source"] == "mock"
     assert metadata["symbol"] == "MOCK_DAILY"
-    assert metadata["frequency"] == "daily"
     assert metadata["description"] == "Test daily data"
 
 
@@ -410,11 +390,10 @@ def test_client_get_metadata_includes_source_info(
     assert metadata["my_name"] == "TEST_MONTHLY"
     assert metadata["source"] == "mock_monthly"
     assert metadata["symbol"] == "MOCK_MONTHLY"
-    assert metadata["frequency"] == "monthly"
 
     # Source-specific metadata from MockMonthlySource.get_metadata()
     # The source returns {"symbol": symbol, "frequency": "monthly"}
-    # Note: source's "frequency" key gets merged (may override or be overridden)
+    # Note: source's "frequency" key may be present from the source adapter
     assert "symbol" in metadata  # From source metadata
 
 

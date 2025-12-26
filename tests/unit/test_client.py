@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from metapyle.client import Client
-from metapyle.exceptions import FrequencyMismatchError, SymbolNotFoundError, UnknownSourceError
+from metapyle.exceptions import SymbolNotFoundError, UnknownSourceError
 from metapyle.sources.base import BaseSource, register_source
 
 # ============================================================================
@@ -183,10 +183,10 @@ def test_client_get_frequency_mismatch_raises(
     catalog_yaml: Path,
     cache_path: str,
 ) -> None:
-    """Client.get() raises FrequencyMismatchError for different frequencies without alignment."""
+    """Client.get() raises ValueError for different frequencies without alignment."""
     client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
 
-    with pytest.raises(FrequencyMismatchError, match="frequency"):
+    with pytest.raises(ValueError, match="frequency"):
         client.get(
             ["TEST_DAILY", "TEST_MONTHLY"],
             start="2024-01-01",

@@ -7,7 +7,6 @@ import pandas as pd
 
 from metapyle.cache import Cache
 from metapyle.catalog import Catalog, CatalogEntry
-from metapyle.exceptions import FrequencyMismatchError
 from metapyle.sources.base import SourceRegistry, _global_registry
 
 __all__ = ["Client"]
@@ -90,7 +89,7 @@ class Client:
         ------
         SymbolNotFoundError
             If any symbol is not in the catalog.
-        FrequencyMismatchError
+        ValueError
             If symbols have different frequencies and no alignment frequency
             is specified.
         FetchError
@@ -142,7 +141,7 @@ class Client:
 
         Raises
         ------
-        FrequencyMismatchError
+        ValueError
             If entries have different frequencies.
         """
         if len(entries) <= 1:
@@ -151,7 +150,7 @@ class Client:
         frequencies = {entry.frequency for entry in entries}
         if len(frequencies) > 1:
             freq_list = ", ".join(f"{entry.my_name}={entry.frequency}" for entry in entries)
-            raise FrequencyMismatchError(
+            raise ValueError(
                 f"Symbols have different frequencies: {freq_list}. "
                 "Specify a frequency parameter for alignment."
             )

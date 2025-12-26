@@ -7,7 +7,6 @@ __all__ = [
     "MetapyleError",
     "CatalogError",
     "FetchError",
-    "FrequencyMismatchError",
     "CatalogValidationError",
     "DuplicateNameError",
     "UnknownSourceError",
@@ -26,10 +25,6 @@ class CatalogError(MetapyleError):
 
 class FetchError(MetapyleError):
     """Data fetching errors."""
-
-
-class FrequencyMismatchError(MetapyleError):
-    """Raised when symbols have incompatible frequencies without alignment."""
 
 
 class CatalogValidationError(CatalogError):

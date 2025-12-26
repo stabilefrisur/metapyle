@@ -7,7 +7,6 @@ from metapyle.exceptions import (
     CatalogValidationError,
     DuplicateNameError,
     FetchError,
-    FrequencyMismatchError,
     MetapyleError,
     NoDataError,
     SymbolNotFoundError,
@@ -32,12 +31,6 @@ def test_catalog_error_inherits_from_metapyle_error() -> None:
 def test_fetch_error_inherits_from_metapyle_error() -> None:
     """FetchError should inherit from MetapyleError."""
     error = FetchError("fetch failed")
-    assert isinstance(error, MetapyleError)
-
-
-def test_frequency_mismatch_error_inherits_from_metapyle_error() -> None:
-    """FrequencyMismatchError should inherit from MetapyleError."""
-    error = FrequencyMismatchError("frequency issue")
     assert isinstance(error, MetapyleError)
 
 
@@ -77,7 +70,6 @@ def test_no_data_error_inherits_from_fetch_error() -> None:
         MetapyleError,
         CatalogError,
         FetchError,
-        FrequencyMismatchError,
         CatalogValidationError,
         DuplicateNameError,
         UnknownSourceError,

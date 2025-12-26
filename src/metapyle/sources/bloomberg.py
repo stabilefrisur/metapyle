@@ -94,10 +94,7 @@ class BloombergSource(BaseSource):
         blp = _get_blp()
         if blp is None:
             logger.error("fetch_failed: symbol=%s, reason=xbbg_not_installed", symbol)
-            raise FetchError(
-                "xbbg package is not installed. "
-                "Install with: pip install xbbg"
-            )
+            raise FetchError("xbbg package is not installed. Install with: pip install xbbg")
 
         logger.debug(
             "fetch_start: symbol=%s, start=%s, end=%s, field=%s",

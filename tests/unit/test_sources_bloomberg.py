@@ -36,9 +36,7 @@ class TestBloombergSourceFetchSingleTicker:
             assert result.iloc[0]["value"] == 5000.0
             assert result.iloc[1]["value"] == 5001.0
 
-            mock_blp.bdh.assert_called_once_with(
-                "SPX Index", "PX_LAST", "2024-01-02", "2024-01-03"
-            )
+            mock_blp.bdh.assert_called_once_with("SPX Index", "PX_LAST", "2024-01-02", "2024-01-03")
 
 
 class TestBloombergSourceFetchCustomField:
@@ -57,9 +55,7 @@ class TestBloombergSourceFetchCustomField:
 
         with patch("metapyle.sources.bloomberg._get_blp", return_value=mock_blp):
             source = BloombergSource()
-            result = source.fetch(
-                "AAPL US Equity", "2024-01-02", "2024-01-03", field="PX_OPEN"
-            )
+            result = source.fetch("AAPL US Equity", "2024-01-02", "2024-01-03", field="PX_OPEN")
 
             assert isinstance(result, pd.DataFrame)
             assert len(result) == 2

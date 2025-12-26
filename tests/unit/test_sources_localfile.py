@@ -34,9 +34,7 @@ class TestLocalFileSourceFetchCSV:
 class TestLocalFileSourceFetchParquet:
     """Tests for Parquet file fetching."""
 
-    def test_localfile_source_fetch_parquet(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
+    def test_localfile_source_fetch_parquet(self, tmp_path: pytest.TempPathFactory) -> None:
         """Test fetching data from a Parquet file."""
         # Create test Parquet
         parquet_path = tmp_path / "test_data.parquet"
@@ -56,9 +54,7 @@ class TestLocalFileSourceFetchParquet:
 class TestLocalFileSourceDateFiltering:
     """Tests for date range filtering."""
 
-    def test_localfile_source_date_filtering(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
+    def test_localfile_source_date_filtering(self, tmp_path: pytest.TempPathFactory) -> None:
         """Test that date filtering correctly limits results."""
         csv_path = tmp_path / "date_filter.csv"
         df = pd.DataFrame(
@@ -81,9 +77,7 @@ class TestLocalFileSourceDateFiltering:
 class TestLocalFileSourceFileNotFound:
     """Tests for file not found error handling."""
 
-    def test_localfile_source_file_not_found(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
+    def test_localfile_source_file_not_found(self, tmp_path: pytest.TempPathFactory) -> None:
         """Test that FetchError is raised when file doesn't exist."""
         source = LocalFileSource()
         nonexistent = tmp_path / "nonexistent.csv"
@@ -95,9 +89,7 @@ class TestLocalFileSourceFileNotFound:
 class TestLocalFileSourceEmptyFile:
     """Tests for empty file handling."""
 
-    def test_localfile_source_empty_file(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
+    def test_localfile_source_empty_file(self, tmp_path: pytest.TempPathFactory) -> None:
         """Test that NoDataError is raised for empty files."""
         csv_path = tmp_path / "empty.csv"
         # Create CSV with headers only (empty data)
@@ -114,9 +106,7 @@ class TestLocalFileSourceEmptyFile:
 class TestLocalFileSourceNoDataInRange:
     """Tests for no data in date range."""
 
-    def test_localfile_source_no_data_in_range(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
+    def test_localfile_source_no_data_in_range(self, tmp_path: pytest.TempPathFactory) -> None:
         """Test that NoDataError is raised when no data matches date range."""
         csv_path = tmp_path / "out_of_range.csv"
         df = pd.DataFrame(
@@ -135,9 +125,7 @@ class TestLocalFileSourceNoDataInRange:
 class TestLocalFileSourceGetMetadata:
     """Tests for get_metadata method."""
 
-    def test_localfile_source_get_metadata(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
+    def test_localfile_source_get_metadata(self, tmp_path: pytest.TempPathFactory) -> None:
         """Test metadata retrieval for a file."""
         csv_path = tmp_path / "metadata_test.csv"
         df = pd.DataFrame({"value": [1.0]}, index=pd.to_datetime(["2024-01-01"]))

@@ -82,18 +82,14 @@ class LocalFileSource(BaseSource):
             try:
                 df.index = pd.to_datetime(df.index)
             except Exception as e:
-                logger.error(
-                    "fetch_failed: path=%s, reason=invalid_datetime_index", symbol
-                )
+                logger.error("fetch_failed: path=%s, reason=invalid_datetime_index", symbol)
                 raise FetchError(f"Cannot convert index to datetime: {symbol}") from e
 
         # Rename single column to 'value' if needed
         if len(df.columns) == 1 and df.columns[0] != "value":
             original_col = df.columns[0]
             df = df.rename(columns={original_col: "value"})
-            logger.debug(
-                "column_renamed: path=%s, from=%s, to=value", symbol, original_col
-            )
+            logger.debug("column_renamed: path=%s, from=%s, to=value", symbol, original_col)
 
         # Filter by date range using boolean indexing for type safety
         start_dt = pd.Timestamp(start)
@@ -102,9 +98,7 @@ class LocalFileSource(BaseSource):
         df_filtered = df.loc[mask]
 
         if df_filtered.empty:
-            logger.warning(
-                "fetch_no_data_in_range: path=%s, start=%s, end=%s", symbol, start, end
-            )
+            logger.warning("fetch_no_data_in_range: path=%s, start=%s, end=%s", symbol, start, end)
             raise NoDataError(f"No data in date range {start} to {end}: {symbol}")
 
         logger.info("fetch_complete: path=%s, rows=%d", symbol, len(df_filtered))
@@ -140,9 +134,7 @@ class LocalFileSource(BaseSource):
             # Parquet files may have date column, set as index if not already
             if not isinstance(df.index, pd.DatetimeIndex):
                 # Look for common date column names
-                date_cols = [
-                    c for c in df.columns if c.lower() in ("date", "datetime", "time")
-                ]
+                date_cols = [c for c in df.columns if c.lower() in ("date", "datetime", "time")]
                 if date_cols:
                     df = df.set_index(date_cols[0])
                     df.index = pd.to_datetime(df.index)

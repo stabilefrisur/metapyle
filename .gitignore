@@ -9,4 +9,24 @@ wheels/
 # Virtual environments
 .venv
 
+# Metapyle cache
+cache/
+*.db
+*.db-journal
+
+# Test artifacts
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.cover
+
+# Type checker
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
 .github/

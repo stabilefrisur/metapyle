@@ -1,5 +1,6 @@
 """Metapyle - A unified interface for querying financial time-series data."""
 
+from .client import Client
 from .exceptions import (
     CatalogError,
     CatalogValidationError,
@@ -13,6 +14,7 @@ from .exceptions import (
 )
 
 __all__ = [
+    "Client",
     "MetapyleError",
     "CatalogError",
     "FetchError",

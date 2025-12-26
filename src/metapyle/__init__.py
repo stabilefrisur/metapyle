@@ -1,6 +1,8 @@
 """Metapyle - Unified interface for financial time-series data."""
 
-__version__ = "0.1.0"
+from importlib.metadata import version
+
+__version__ = version("metapyle")
 
 from metapyle.client import Client
 from metapyle.exceptions import (

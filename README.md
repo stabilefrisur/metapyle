@@ -39,7 +39,6 @@ pip install metapyle[bloomberg]
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
-  frequency: daily
 ```
 
 **2. Query data:**

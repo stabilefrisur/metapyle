@@ -42,7 +42,6 @@ Metapyle introduces a **catalog**—a YAML file that maps human-readable names t
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
-  frequency: daily
 ```
 
 Now your analysis code uses `sp500_close` everywhere. If the underlying source changes, you update the catalog once—not every script.
@@ -121,13 +120,11 @@ Create a file called `catalog.yaml`:
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
-  frequency: daily
   description: S&P 500 closing price
 
 - my_name: us_gdp
   source: bloomberg
   symbol: GDP CUR$ Index
-  frequency: quarterly
   description: US GDP in current dollars
   unit: USD billions
 ```
@@ -182,7 +179,6 @@ The catalog is a YAML file that maps human-readable names to source-specific det
 | `my_name` | Yes | Unique identifier you'll use in code |
 | `source` | Yes | Data source adapter (`bloomberg`, `localfile`) |
 | `symbol` | Yes | Source-specific identifier |
-| `frequency` | Yes | Data frequency: `daily`, `weekly`, `monthly`, `quarterly`, `annual` |
 | `field` | No | Source-specific field (e.g., `PX_LAST` for Bloomberg) |
 | `description` | No | Human-readable description |
 | `unit` | No | Unit of measurement |
@@ -211,7 +207,6 @@ Use `lower_case_with_underscores` for `my_name`:
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
-  frequency: daily
   description: S&P 500 closing price
   unit: points
 
@@ -219,21 +214,18 @@ Use `lower_case_with_underscores` for `my_name`:
   source: bloomberg
   symbol: SPX Index
   field: PX_VOLUME
-  frequency: daily
   description: S&P 500 trading volume
 
 # Macro data
 - my_name: us_gdp
   source: bloomberg
   symbol: GDP CUR$ Index
-  frequency: quarterly
   description: US GDP in current dollars
   unit: USD billions
 
 - my_name: us_cpi_yoy
   source: bloomberg
   symbol: CPI YOY Index
-  frequency: monthly
   description: US CPI year-over-year change
   unit: percent
 ```
@@ -266,7 +258,6 @@ All entries are merged. If the same `my_name` appears in multiple files, metapyl
 Metapyle validates your catalog on load:
 
 - **Missing required fields** → `CatalogValidationError`
-- **Invalid frequency** → `CatalogValidationError`
 - **Duplicate `my_name`** → `DuplicateNameError`
 - **Unknown source** → `UnknownSourceError`
 
@@ -355,7 +346,7 @@ print(meta)
 #     'my_name': 'sp500_close',
 #     'source': 'bloomberg',
 #     'symbol': 'SPX Index',
-#     'frequency': 'daily',
+#     'frequency': 'B',  # inferred from data (pandas alias, or None if irregular)
 #     'field': 'PX_LAST',
 #     'description': 'S&P 500 closing price',
 #     'unit': 'points',
@@ -383,18 +374,18 @@ df = client.get_raw(
 
 ### Mixing Frequencies
 
-When fetching multiple series with different frequencies, you must specify a target `frequency` parameter. Without it, metapyle raises a `FrequencyMismatchError`. See [Frequency Alignment](#frequency-alignment) for details.
+When fetching multiple series with different frequencies, metapyle logs a warning and merges them using an outer join (which may produce NaN values). To avoid this, specify a `frequency` parameter to align all series. See [Frequency Alignment](#frequency-alignment) for details.
 
 ```python
-# ❌ Raises FrequencyMismatchError: different frequencies without alignment
+# ⚠️ Warning logged: different frequencies merged with outer join (may have NaNs)
 df = client.get(["sp500_close", "us_gdp"], start="2024-01-01", end="2024-12-31")
 
-# ✅ Works: align everything to monthly
+# ✅ Better: align everything to month-end
 df = client.get(
     ["sp500_close", "us_gdp"],  # daily + quarterly
     start="2024-01-01",
     end="2024-12-31",
-    frequency="monthly"
+    frequency="ME"  # pandas month-end frequency
 )
 ```
 
@@ -406,13 +397,19 @@ When combining data series with different native frequencies, metapyle can autom
 
 ### Supported Frequencies
 
-| Frequency | Value | Example Dates |
+The `frequency` parameter accepts any valid [pandas frequency alias](https://pandas.pydata.org/docs/user_guide/timeseries.html#offset-aliases). Common options:
+
+| Frequency | Alias | Example Dates |
 |-----------|-------|---------------|
-| Daily | `daily` | 2024-01-02, 2024-01-03, ... |
-| Weekly | `weekly` | 2024-01-07, 2024-01-14, ... |
-| Monthly | `monthly` | 2024-01-31, 2024-02-29, ... |
-| Quarterly | `quarterly` | 2024-03-31, 2024-06-30, ... |
-| Annual | `annual` | 2024-12-31, 2025-12-31, ... |
+| Daily | `D` | 2024-01-02, 2024-01-03, ... |
+| Business daily | `B` | 2024-01-02, 2024-01-03, ... (weekdays only) |
+| Weekly | `W` | 2024-01-07, 2024-01-14, ... |
+| Month-end | `ME` | 2024-01-31, 2024-02-29, ... |
+| Business month-end | `BME` | 2024-01-31, 2024-02-29, ... (last business day) |
+| Quarter-end | `QE` | 2024-03-31, 2024-06-30, ... |
+| Year-end | `YE` | 2024-12-31, 2025-12-31, ... |
+
+Invalid frequency strings cause pandas to raise a `ValueError`.
 
 ### How Resampling Works
 
@@ -436,11 +433,11 @@ df = client.get(
     ["sp500_close", "us_gdp"],
     start="2024-01-01",
     end="2024-12-31",
-    frequency="monthly"
+    frequency="ME"  # month-end
 )
 ```
 
-### Example: Daily + Quarterly → Monthly
+### Example: Daily + Quarterly → Month-End
 
 ```python
 # sp500_close: daily data
@@ -449,7 +446,7 @@ df = client.get(
     ["sp500_close", "us_gdp"],
     start="2024-01-01",
     end="2024-06-30",
-    frequency="monthly"
+    frequency="ME"  # month-end
 )
 
 print(df)
@@ -579,13 +576,11 @@ Common fields:
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
-  frequency: daily
 
 - my_name: aapl_volume
   source: bloomberg
   symbol: AAPL US Equity
   field: PX_VOLUME
-  frequency: daily
 ```
 
 ### Local File (`localfile`)
@@ -623,13 +618,11 @@ date,close_price
 - my_name: internal_forecast
   source: localfile
   symbol: /data/forecasts/gdp_forecast.csv
-  frequency: quarterly
   description: Internal GDP forecast
 
 - my_name: proprietary_index
   source: localfile
   symbol: ./data/prop_index.parquet
-  frequency: daily
 ```
 
 ---
@@ -660,9 +653,9 @@ except MetapyleError as e:
 | `DuplicateNameError` | Same `my_name` appears in multiple catalog entries | Use unique names across all catalog files |
 | `SymbolNotFoundError` | Requested name not in catalog | Check spelling, verify entry exists in catalog |
 | `UnknownSourceError` | Catalog references unregistered source | Check source name spelling (`bloomberg`, `localfile`) |
-| `FrequencyMismatchError` | Multiple series have different frequencies without alignment | Add `frequency` parameter to align |
 | `FetchError` | Data retrieval failed (API error, file not found) | Check source availability, credentials, file path |
 | `NoDataError` | Source returned empty data for the request | Verify symbol exists and date range has data |
+| `ValueError` | Invalid pandas frequency string | Check pandas frequency alias documentation |
 
 ### Example Error Messages
 
@@ -672,16 +665,23 @@ SymbolNotFoundError: Symbol not found in catalog: spx_close.
 Available: sp500_close, nasdaq_close, us_gdp, us_cpi_yoy, eur_usd...
 ```
 
-**Frequency mismatch:**
+**Invalid frequency string:**
 ```
-FrequencyMismatchError: Symbols have different frequencies: 
-sp500_close=daily, us_gdp=quarterly. 
-Specify a frequency parameter for alignment.
+ValueError: Invalid frequency: <invalid pandas alias>
 ```
 
 **File not found (localfile source):**
 ```
 FetchError: File not found: /data/missing_file.csv
+```
+
+### Warning Messages
+
+When series have different frequencies and no `frequency` parameter is specified, metapyle logs a warning (but continues):
+
+```
+WARNING - index_mismatch: Series have different frequencies: sp500_close=B, us_gdp=irregular. 
+Outer join may produce NaN values. Consider specifying frequency parameter.
 ```
 
 ### Catching Specific Errors
@@ -690,23 +690,21 @@ FetchError: File not found: /data/missing_file.csv
 from metapyle import (
     Client,
     SymbolNotFoundError,
-    FrequencyMismatchError,
     FetchError,
 )
 
 with Client(catalog="catalog.yaml") as client:
     try:
-        df = client.get(["sp500_close", "us_gdp"], start="2024-01-01", end="2024-12-31")
-    except SymbolNotFoundError as e:
-        print(f"Check your symbol names: {e}")
-    except FrequencyMismatchError:
-        # Retry with frequency alignment
         df = client.get(
             ["sp500_close", "us_gdp"],
             start="2024-01-01",
             end="2024-12-31",
-            frequency="monthly"
+            frequency="ME",  # align to month-end
         )
+    except SymbolNotFoundError as e:
+        print(f"Check your symbol names: {e}")
+    except ValueError as e:
+        print(f"Invalid frequency: {e}")
     except FetchError as e:
         print(f"Data fetch failed: {e}")
 ```
@@ -763,11 +761,11 @@ Adapters that know how to fetch data from specific providers. Each source (Bloom
 ### What Happens When You Call `get()`
 
 1. **Resolve names** → Client looks up each `my_name` in the catalog to get source details
-2. **Check frequencies** → If series have different frequencies and no alignment specified, raise error
-3. **For each symbol:**
+2. **For each symbol:**
    - Check cache for existing data
    - If cache miss, fetch from source
    - Store fetched data in cache
-4. **Apply alignment** → If `frequency` parameter provided, resample each series
+3. **Apply alignment** → If `frequency` parameter provided, resample each series
+4. **Check index alignment** → If no `frequency` specified and series have different indexes, log a warning
 5. **Assemble DataFrame** → Combine all series into a wide DataFrame with columns named by `my_name`
 6. **Return** → You get a clean pandas DataFrame ready for analysis

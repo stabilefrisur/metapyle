@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Macrobond data source via macrobond-data-api integration (optional dependency)
+  - `fetch()` with raw mode using `get_one_series`
+  - `fetch()` with unified mode using `get_unified_series` for frequency/currency alignment
+  - `get_metadata()` for retrieving series metadata
+
 ### Changed
 
 - `end` parameter in `get()` and `get_raw()` is now optional, defaulting to today's date

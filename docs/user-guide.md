@@ -68,8 +68,8 @@ Now your analysis code uses `sp500_close` everywhere. If the underlying source c
 | Source | Description | Status |
 |--------|-------------|--------|
 | `bloomberg` | Bloomberg Terminal via xbbg | Available |
+| `macrobond` | Macrobond via macrobond-data-api | Available |
 | `localfile` | CSV and Parquet files | Available |
-| More | Additional adapters in development | Coming soon |
 
 ---
 
@@ -97,6 +97,18 @@ pip install metapyle[bloomberg]
 This installs the `xbbg` package. You'll also need:
 - Bloomberg Terminal running on your machine, OR
 - Access to a Bloomberg Server API (B-PIPE)
+
+### With Macrobond Support
+
+For Macrobond data access:
+
+```bash
+pip install metapyle[macrobond]
+```
+
+This installs the `macrobond-data-api` package. You'll also need:
+- Macrobond desktop application installed (uses COM interface), OR
+- Macrobond Web API credentials configured
 
 ### Verify Installation
 
@@ -553,6 +565,41 @@ Fetches data from Bloomberg Terminal via the `xbbg` library.
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
+```
+
+### Macrobond (`macrobond`)
+
+Fetches data from Macrobond via the `macrobond-data-api` library.
+
+**Requirements:**
+- `pip install metapyle[macrobond]`
+- Macrobond desktop app installed, OR Macrobond Web API credentials
+
+**Symbol format:** Macrobond series names (e.g., `usgdp`, `gbcpi`, `derate0003`)
+
+```yaml
+- my_name: us_gdp
+  source: macrobond
+  symbol: usgdp
+  description: US GDP
+
+- my_name: uk_cpi
+  source: macrobond
+  symbol: gbcpi
+  description: UK Consumer Price Index
+```
+
+**Unified series mode:** For advanced queries with frequency/currency alignment, use `get_raw()` with `unified=True`:
+
+```python
+df = client.get_raw(
+    source="macrobond",
+    symbol="usgdp",
+    start="2020-01-01",
+    unified=True,
+    frequency="Monthly",
+    currency="EUR"
+)
 ```
 
 ### Local File (`localfile`)

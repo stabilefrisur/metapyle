@@ -14,7 +14,7 @@ Requires Python 3.12+
 
 Financial data lives in many places—Bloomberg terminals, internal APIs, CSV exports—each with its own ticker syntax, authentication, and quirks. Metapyle provides a YAML-based catalog that maps human-readable names to source-specific details, giving you a single `client.get()` interface regardless of where the data comes from.
 
-Currently supports Bloomberg (via xbbg) and local files (CSV/Parquet).
+Currently supports Bloomberg (via xbbg), Macrobond (via macrobond-data-api), and local files (CSV/Parquet).
 
 ## Installation
 
@@ -28,7 +28,13 @@ Or with pip:
 pip install metapyle[bloomberg]
 ```
 
-> **Note:** Bloomberg support requires a Bloomberg Terminal running on your machine.
+For Macrobond support:
+
+```bash
+pip install metapyle[macrobond]
+```
+
+> **Note:** Bloomberg requires a Bloomberg Terminal. Macrobond requires desktop app or API credentials.
 
 ## Quick Start
 

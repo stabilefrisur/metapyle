@@ -39,6 +39,11 @@ pip install metapyle[bloomberg]
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
+
+- my_name: gdp_us
+  source: localfile
+  symbol: GDP_US          # column name in the file
+  path: /data/macro.csv   # file path
 ```
 
 **2. Query data:**

@@ -113,21 +113,21 @@ This example shows the typical workflow: create a catalog, initialize a client, 
 
 ### Step 1: Create a Catalog File
 
-Create a file called `catalog.yaml`:
+Create `catalog.yaml`:
 
 ```yaml
 - my_name: sp500_close
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
-  description: S&P 500 closing price
 
-- my_name: us_gdp
-  source: bloomberg
-  symbol: GDP CUR$ Index
-  description: US GDP in current dollars
-  unit: USD billions
+- my_name: gdp_forecast
+  source: localfile
+  symbol: GDP_FORECAST       # column name in file
+  path: /data/forecasts.csv  # file path
 ```
+
+See [Catalog Configuration](#catalog-configuration) for full details.
 
 ### Step 2: Query Data
 
@@ -178,8 +178,9 @@ The catalog is a YAML file that maps human-readable names to source-specific det
 |-------|----------|-------------|
 | `my_name` | Yes | Unique identifier you'll use in code |
 | `source` | Yes | Data source adapter (`bloomberg`, `localfile`) |
-| `symbol` | Yes | Source-specific identifier |
+| `symbol` | Yes | Source-specific identifier (column name for `localfile`) |
 | `field` | No | Source-specific field (e.g., `PX_LAST` for Bloomberg) |
+| `path` | No | File path for `localfile` source |
 | `description` | No | Human-readable description |
 | `unit` | No | Unit of measurement |
 
@@ -216,7 +217,7 @@ Use `lower_case_with_underscores` for `my_name`:
   field: PX_VOLUME
   description: S&P 500 trading volume
 
-# Macro data
+# Macro data from Bloomberg
 - my_name: us_gdp
   source: bloomberg
   symbol: GDP CUR$ Index
@@ -228,6 +229,13 @@ Use `lower_case_with_underscores` for `my_name`:
   symbol: CPI YOY Index
   description: US CPI year-over-year change
   unit: percent
+
+# Local file data
+- my_name: internal_forecast
+  source: localfile
+  symbol: GDP_FORECAST       # column name in file
+  path: /data/forecasts.csv  # file path
+  description: Internal GDP forecast
 ```
 
 ### Organizing Large Catalogs
@@ -318,6 +326,7 @@ df = client.get(["sp500_close"], start="01/01/2024", end="12/31/2024")
 Use `get_raw()` for one-off queries that bypass the catalog—useful for exploring new data or quick tests:
 
 ```python
+# Bloomberg: returns column named 'symbol_field'
 df = client.get_raw(
     source="bloomberg",
     symbol="AAPL US Equity",
@@ -325,15 +334,29 @@ df = client.get_raw(
     start="2024-01-01",
     end="2024-12-31"
 )
+print(df.head())
+#             AAPL US Equity_PX_LAST
+# 2024-01-02                   185.64
+# 2024-01-03                   184.25
+
+# LocalFile: returns column with original name from file
+df = client.get_raw(
+    source="localfile",
+    symbol="GDP_US",           # column name to extract
+    path="/data/macro.csv",   # file path
+    start="2024-01-01",
+    end="2024-12-31"
+)
+print(df.head())
+#             GDP_US
+# 2024-01-02  27956.0
+# 2024-01-03  27956.0
 ```
 
-`get_raw()` returns a DataFrame with a single `value` column:
+`get_raw()` returns a DataFrame with the source's original column name:
 
-```python
-#             value
-# 2024-01-02  185.64
-# 2024-01-03  184.25
-```
+- **Bloomberg**: `symbol_field` (e.g., `AAPL US Equity_PX_LAST`)
+- **LocalFile**: column name as-is from the file (e.g., `GDP_US`)
 
 ### Inspecting Metadata
 
@@ -352,24 +375,6 @@ print(meta)
 #     'unit': 'points',
 #     ...
 # }
-```
-
-### Bypassing Cache
-
-By default, queries use the cache. To force a fresh fetch:
-
-```python
-# Bypass cache for this query
-df = client.get(["sp500_close"], start="2024-01-01", end="2024-12-31", use_cache=False)
-
-# Also works with get_raw()
-df = client.get_raw(
-    source="bloomberg",
-    symbol="SPX Index",
-    start="2024-01-01",
-    end="2024-12-31",
-    use_cache=False
-)
 ```
 
 ### Mixing Frequencies
@@ -421,27 +426,10 @@ Invalid frequency strings cause pandas to raise a `ValueError`.
 - **Forward-fills** values until the next data point
 - Example: Q1 GDP value appears for Jan, Feb, Mar
 
-### When to Use Alignment
-
-Use the `frequency` parameter when:
-- Combining series with different native frequencies
-- You need output at a specific frequency for your analysis
+### Example
 
 ```python
-# Combine daily equity prices with quarterly GDP
-df = client.get(
-    ["sp500_close", "us_gdp"],
-    start="2024-01-01",
-    end="2024-12-31",
-    frequency="ME"  # month-end
-)
-```
-
-### Example: Daily + Quarterly → Month-End
-
-```python
-# sp500_close: daily data
-# us_gdp: quarterly data
+# sp500_close: daily data, us_gdp: quarterly data
 df = client.get(
     ["sp500_close", "us_gdp"],
     start="2024-01-01",
@@ -452,11 +440,10 @@ df = client.get(
 print(df)
 #             sp500_close    us_gdp
 # 2024-01-31      4845.65   27956.0  # Q1 GDP forward-filled
-# 2024-02-29      5096.27   27956.0  # Q1 GDP forward-filled
+# 2024-02-29      5096.27   27956.0
 # 2024-03-31      5254.35   27956.0  # Q1 GDP (actual release month)
 # 2024-04-30      5035.69   28279.0  # Q2 GDP forward-filled
-# 2024-05-31      5277.51   28279.0  # Q2 GDP forward-filled
-# 2024-06-30      5460.48   28279.0  # Q2 GDP (actual release month)
+# ...
 ```
 
 ### Data Interpretation Warning
@@ -477,7 +464,7 @@ Metapyle includes an SQLite-based cache to reduce redundant API calls. This is e
 
 - Cache is **enabled by default**
 - Data is stored in a local SQLite database
-- Cache key: `(source, symbol, field, start_date, end_date)`
+- Cache key: `(source, symbol, field, path, start_date, end_date)`
 - If you request a date range that's a subset of a cached range, the cached data is filtered and returned
 
 ### Default Cache Location
@@ -533,9 +520,8 @@ client.clear_cache()
 
 ### Cache Behavior Notes
 
-- Cache stores raw data **before** frequency alignment
-- If you request the same data with different `frequency` parameters, the raw data is fetched from cache and resampled
-- Cache misses are logged at DEBUG level—enable logging to diagnose cache behavior
+- Cache stores raw data **before** frequency alignment—resampling happens on retrieval
+- Cache misses are logged at DEBUG level
 
 ---
 
@@ -549,80 +535,45 @@ Fetches data from Bloomberg Terminal via the `xbbg` library.
 
 **Requirements:**
 - `pip install metapyle[bloomberg]`
-- Bloomberg Terminal running locally, OR
-- Bloomberg Server API (B-PIPE) access
+- Bloomberg Terminal running locally, OR Bloomberg Server API (B-PIPE) access
 
-**Symbol format:** Standard Bloomberg tickers
+**Symbol format:** Standard Bloomberg tickers (`SPX Index`, `AAPL US Equity`, `EURUSD Curncy`)
 
-| Type | Example |
-|------|---------|
-| Index | `SPX Index` |
-| Equity | `AAPL US Equity` |
-| Currency | `EURUSD Curncy` |
-| Economic | `GDP CUR$ Index` |
-
-**Field parameter:** Bloomberg field name (default: `PX_LAST`)
-
-Common fields:
-- `PX_LAST` – Last price
-- `PX_OPEN`, `PX_HIGH`, `PX_LOW` – OHLC prices
-- `PX_VOLUME` – Volume
-- `CHG_PCT_1D` – 1-day percent change
-
-**Catalog example:**
+**Field:** Bloomberg field name (default: `PX_LAST`). Common: `PX_LAST`, `PX_OPEN`, `PX_HIGH`, `PX_LOW`, `PX_VOLUME`
 
 ```yaml
 - my_name: sp500_close
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
-
-- my_name: aapl_volume
-  source: bloomberg
-  symbol: AAPL US Equity
-  field: PX_VOLUME
 ```
 
 ### Local File (`localfile`)
 
 Reads time-series data from CSV or Parquet files.
 
-**Requirements:** None (included in base install)
+**Symbol:** Column name to extract (case-sensitive)
 
-**Symbol format:** File path (absolute or relative)
+**Path:** File path (absolute or relative)
 
-**Supported formats:**
-- `.csv` – First column must be parseable as dates (used as index)
-- `.parquet` – Must have a date column or DatetimeIndex
+**File format:** First column = dates (index), remaining columns = data
 
-**File format requirements:**
-
-CSV files should look like:
 ```csv
-date,value
-2024-01-02,4742.83
-2024-01-03,4704.81
-2024-01-04,4688.68
+date,GDP_US,CPI_US
+2024-01-02,27956.0,308.4
+2024-01-03,27956.0,308.5
 ```
-
-Or with a named column (will be renamed to `value`):
-```csv
-date,close_price
-2024-01-02,4742.83
-2024-01-03,4704.81
-```
-
-**Catalog example:**
 
 ```yaml
-- my_name: internal_forecast
+- my_name: gdp_us
   source: localfile
-  symbol: /data/forecasts/gdp_forecast.csv
-  description: Internal GDP forecast
+  symbol: GDP_US            # column name
+  path: /data/macro.csv     # file path
 
-- my_name: proprietary_index
+- my_name: cpi_us
   source: localfile
-  symbol: ./data/prop_index.parquet
+  symbol: CPI_US            # same file, different column
+  path: /data/macro.csv
 ```
 
 ---
@@ -631,9 +582,19 @@ date,close_price
 
 Metapyle uses a fail-fast approach: errors are raised immediately with clear messages. No partial results, no silent failures.
 
-### Exception Hierarchy
+### Common Errors
 
-All metapyle exceptions inherit from `MetapyleError`, so you can catch everything with a single handler:
+| Exception | When It Occurs |
+|-----------|----------------|
+| `CatalogValidationError` | YAML malformed or missing required fields |
+| `DuplicateNameError` | Same `my_name` in multiple entries |
+| `SymbolNotFoundError` | Requested name not in catalog |
+| `UnknownSourceError` | Unknown source name |
+| `FetchError` | Data retrieval failed (API error, file/column not found) |
+| `NoDataError` | Source returned empty data |
+| `ValueError` | Invalid pandas frequency string |
+
+All exceptions inherit from `MetapyleError`:
 
 ```python
 from metapyle import Client, MetapyleError
@@ -643,70 +604,6 @@ try:
         df = client.get(["sp500_close"], start="2024-01-01", end="2024-12-31")
 except MetapyleError as e:
     print(f"Metapyle error: {e}")
-```
-
-### Common Errors
-
-| Exception | When It Occurs | What To Do |
-|-----------|----------------|------------|
-| `CatalogValidationError` | Catalog YAML is malformed or missing required fields | Check YAML syntax and required fields |
-| `DuplicateNameError` | Same `my_name` appears in multiple catalog entries | Use unique names across all catalog files |
-| `SymbolNotFoundError` | Requested name not in catalog | Check spelling, verify entry exists in catalog |
-| `UnknownSourceError` | Catalog references unregistered source | Check source name spelling (`bloomberg`, `localfile`) |
-| `FetchError` | Data retrieval failed (API error, file not found) | Check source availability, credentials, file path |
-| `NoDataError` | Source returned empty data for the request | Verify symbol exists and date range has data |
-| `ValueError` | Invalid pandas frequency string | Check pandas frequency alias documentation |
-
-### Example Error Messages
-
-**Symbol not found:**
-```
-SymbolNotFoundError: Symbol not found in catalog: spx_close. 
-Available: sp500_close, nasdaq_close, us_gdp, us_cpi_yoy, eur_usd...
-```
-
-**Invalid frequency string:**
-```
-ValueError: Invalid frequency: <invalid pandas alias>
-```
-
-**File not found (localfile source):**
-```
-FetchError: File not found: /data/missing_file.csv
-```
-
-### Warning Messages
-
-When series have different frequencies and no `frequency` parameter is specified, metapyle logs a warning (but continues):
-
-```
-WARNING - index_mismatch: Series have different frequencies: sp500_close=B, us_gdp=irregular. 
-Outer join may produce NaN values. Consider specifying frequency parameter.
-```
-
-### Catching Specific Errors
-
-```python
-from metapyle import (
-    Client,
-    SymbolNotFoundError,
-    FetchError,
-)
-
-with Client(catalog="catalog.yaml") as client:
-    try:
-        df = client.get(
-            ["sp500_close", "us_gdp"],
-            start="2024-01-01",
-            end="2024-12-31",
-            frequency="ME",  # align to month-end
-        )
-    except SymbolNotFoundError as e:
-        print(f"Check your symbol names: {e}")
-    except ValueError as e:
-        print(f"Invalid frequency: {e}")
-    except FetchError as e:
-        print(f"Data fetch failed: {e}")
 ```
 
 ---
@@ -720,52 +617,25 @@ This section provides a high-level view of how metapyle works. You don't need to
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                      Your Code                               │
-│                                                              │
 │   client.get(["sp500_close", "us_gdp"], ...)                 │
 └─────────────────────┬────────────────────────────────────────┘
                       │
                       ▼
 ┌──────────────────────────────────────────────────────────────┐
 │                       Client                                 │
-│                                                              │
-│  • Resolves catalog names to source details                  │
-│  • Coordinates caching and fetching                          │
-│  • Applies frequency alignment                               │
-│  • Assembles final DataFrame                                 │
+│  Resolves names → Caching → Fetching → Alignment → Assemble  │
 └──────┬──────────────────┬──────────────────┬─────────────────┘
        │                  │                  │
        ▼                  ▼                  ▼
 ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐
 │   Catalog    │  │    Cache     │  │        Sources           │
-│              │  │              │  │                          │
-│ YAML files   │  │ SQLite DB    │  │ ┌──────────┐ ┌─────────┐ │
-│ with name    │  │ stores       │  │ │Bloomberg │ │Localfile│ │
-│ mappings     │  │ fetched data │  │ └──────────┘ └─────────┘ │
+│  YAML files  │  │  SQLite DB   │  │  Bloomberg │ LocalFile   │
 └──────────────┘  └──────────────┘  └──────────────────────────┘
 ```
 
-### Components
-
-**Client**  
-The main entry point you interact with. It loads your catalog, manages the cache, and coordinates data fetching from sources. When you call `get()`, the client handles everything and returns a clean DataFrame.
-
-**Catalog**  
-A collection of entries loaded from one or more YAML files. Each entry maps a `my_name` to source-specific details (symbol, field, frequency). The catalog is validated on load—if there are errors, you'll know immediately.
-
-**Cache**  
-An SQLite database that stores previously fetched data. When you request data, the client checks the cache first. If the data exists (and covers your date range), it's returned without hitting the source. This speeds up repeated queries and reduces API calls.
-
-**Sources**  
-Adapters that know how to fetch data from specific providers. Each source (Bloomberg, local file, etc.) implements the same interface, so the client can treat them uniformly. Sources are registered by name and instantiated on demand.
-
 ### What Happens When You Call `get()`
 
-1. **Resolve names** → Client looks up each `my_name` in the catalog to get source details
-2. **For each symbol:**
-   - Check cache for existing data
-   - If cache miss, fetch from source
-   - Store fetched data in cache
-3. **Apply alignment** → If `frequency` parameter provided, resample each series
-4. **Check index alignment** → If no `frequency` specified and series have different indexes, log a warning
-5. **Assemble DataFrame** → Combine all series into a wide DataFrame with columns named by `my_name`
-6. **Return** → You get a clean pandas DataFrame ready for analysis
+1. **Resolve names** → Look up `my_name` in catalog
+2. **For each symbol:** Check cache → fetch from source if miss → store in cache
+3. **Apply alignment** → Resample if `frequency` parameter provided
+4. **Assemble DataFrame** → Wide format with columns named by `my_name`

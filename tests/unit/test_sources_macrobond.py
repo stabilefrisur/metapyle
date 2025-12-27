@@ -1,0 +1,110 @@
+"""Unit tests for MacrobondSource."""
+
+from unittest.mock import MagicMock, patch
+
+import pandas as pd
+import pytest
+
+from metapyle.exceptions import FetchError, NoDataError
+from metapyle.sources.macrobond import MacrobondSource
+
+
+class TestMacrobondSourceFetch:
+    """Tests for MacrobondSource.fetch() method."""
+
+    def test_fetch_returns_dataframe_with_correct_structure(self) -> None:
+        """fetch() returns DataFrame with DatetimeIndex and symbol column."""
+        # Create mock series object that mimics macrobond_data_api.get_one_series return
+        mock_series = MagicMock()
+        mock_series.values_to_pd_data_frame.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2020-01-01", "2020-02-01", "2020-03-01"]),
+                "value": [100.0, 101.0, 102.0],
+            }
+        )
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_one_series.return_value = mock_series
+            mock_get_mda.return_value = mock_mda
+
+            source = MacrobondSource()
+            df = source.fetch("usgdp", "2020-01-01", "2020-12-31")
+
+            assert isinstance(df, pd.DataFrame)
+            assert isinstance(df.index, pd.DatetimeIndex)
+            assert "usgdp" in df.columns
+            assert len(df) == 3
+
+    def test_fetch_filters_by_date_range(self) -> None:
+        """fetch() filters data to requested start:end range."""
+        mock_series = MagicMock()
+        mock_series.values_to_pd_data_frame.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(
+                    ["2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01"]
+                ),
+                "value": [99.0, 100.0, 101.0, 102.0, 103.0],
+            }
+        )
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_one_series.return_value = mock_series
+            mock_get_mda.return_value = mock_mda
+
+            source = MacrobondSource()
+            df = source.fetch("usgdp", "2020-01-01", "2020-02-28")
+
+            assert len(df) == 2
+            assert df.index[0] == pd.Timestamp("2020-01-01")
+            assert df.index[-1] == pd.Timestamp("2020-02-01")
+
+    def test_fetch_raises_fetch_error_when_mda_not_available(self) -> None:
+        """fetch() raises FetchError when macrobond_data_api not installed."""
+        with patch("metapyle.sources.macrobond._get_mda", return_value=None):
+            source = MacrobondSource()
+            with pytest.raises(FetchError, match="macrobond_data_api"):
+                source.fetch("usgdp", "2020-01-01", "2020-12-31")
+
+    def test_fetch_raises_no_data_error_when_empty(self) -> None:
+        """fetch() raises NoDataError when series returns no data."""
+        mock_series = MagicMock()
+        mock_series.values_to_pd_data_frame.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime([]),
+                "value": [],
+            }
+        )
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_one_series.return_value = mock_series
+            mock_get_mda.return_value = mock_mda
+
+            source = MacrobondSource()
+            with pytest.raises(NoDataError):
+                source.fetch("usgdp", "2020-01-01", "2020-12-31")
+
+    def test_fetch_raises_fetch_error_on_api_exception(self) -> None:
+        """fetch() wraps API exceptions in FetchError."""
+        with patch(
+            "metapyle.sources.macrobond._get_mda"
+        ) as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_one_series.side_effect = Exception("API connection failed")
+            mock_get_mda.return_value = mock_mda
+
+            source = MacrobondSource()
+            with pytest.raises(FetchError, match="API"):
+                source.fetch("usgdp", "2020-01-01", "2020-12-31")
+
+
+class TestMacrobondSourceIsRegistered:
+    """Tests for MacrobondSource source registration."""
+
+    def test_macrobond_source_is_registered(self) -> None:
+        """MacrobondSource is registered in source registry."""
+        from metapyle.sources.base import _global_registry
+
+        assert "macrobond" in _global_registry.list_sources()

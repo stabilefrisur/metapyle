@@ -349,6 +349,7 @@ class Client:
         end: str,
         *,
         field: str | None = None,
+        path: str | None = None,
         use_cache: bool = True,
     ) -> pd.DataFrame:
         """
@@ -368,13 +369,15 @@ class Client:
             End date in ISO format (YYYY-MM-DD).
         field : str | None, optional
             Source-specific field (e.g., "PX_LAST" for Bloomberg).
+        path : str | None, optional
+            Path to local file for localfile source.
         use_cache : bool, optional
             If False, bypass cache. Default True.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with DatetimeIndex and 'value' column.
+            DataFrame with DatetimeIndex and source-specific column name.
 
         Raises
         ------
@@ -389,7 +392,7 @@ class Client:
                 source=source,
                 symbol=symbol,
                 field=field,
-                path=None,
+                path=path,
                 start_date=start,
                 end_date=end,
             )
@@ -402,6 +405,8 @@ class Client:
         kwargs: dict[str, str] = {}
         if field is not None:
             kwargs["field"] = field
+        if path is not None:
+            kwargs["path"] = path
 
         logger.debug("get_raw_from_source: source=%s, symbol=%s", source, symbol)
         df = source_adapter.fetch(symbol, start, end, **kwargs)
@@ -412,7 +417,7 @@ class Client:
                 source=source,
                 symbol=symbol,
                 field=field,
-                path=None,
+                path=path,
                 start_date=start,
                 end_date=end,
                 data=df,

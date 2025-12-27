@@ -543,11 +543,7 @@ def test_client_get_renames_to_my_name(tmp_path: Path) -> None:
     """Client.get() renames source column to my_name."""
     # Create test CSV
     csv_path = tmp_path / "data.csv"
-    csv_path.write_text(
-        "date,GDP_US\n"
-        "2024-01-01,100.0\n"
-        "2024-01-02,101.0\n"
-    )
+    csv_path.write_text("date,GDP_US\n2024-01-01,100.0\n2024-01-02,101.0\n")
 
     # Create catalog with path
     catalog_path = tmp_path / "catalog.yaml"
@@ -563,5 +559,70 @@ def test_client_get_renames_to_my_name(tmp_path: Path) -> None:
 
     assert "gdp_us" in df.columns
     assert "GDP_US" not in df.columns
+    assert "value" not in df.columns
+    client.close()
+
+
+def test_client_get_raw_with_path(tmp_path: Path) -> None:
+    """Client.get_raw() accepts path parameter for localfile."""
+    # Create test CSV
+    csv_path = tmp_path / "data.csv"
+    csv_path.write_text("date,GDP_US\n2024-01-01,100.0\n2024-01-02,101.0\n")
+
+    # Create minimal catalog (required for Client init)
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog_path.write_text("""
+- my_name: dummy
+  source: localfile
+  symbol: dummy
+  path: /dummy
+""")
+
+    client = Client(catalog=str(catalog_path), cache_enabled=False)
+    df = client.get_raw(
+        source="localfile",
+        symbol="GDP_US",
+        start="2024-01-01",
+        end="2024-01-02",
+        path=str(csv_path),
+    )
+
+    # get_raw returns original column name
+    assert "GDP_US" in df.columns
+    assert "value" not in df.columns
+    client.close()
+
+
+def test_client_get_raw_bloomberg_returns_symbol_field(
+    tmp_path: Path,
+    mocker: Any,
+) -> None:
+    """Client.get_raw() for Bloomberg returns symbol_field column name."""
+    # Mock Bloomberg
+    mock_blp = mocker.MagicMock()
+    mock_blp.bdh.return_value = pd.DataFrame(
+        {("SPX Index", "PX_LAST"): [100.0, 101.0]},
+        index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
+    )
+    mocker.patch("metapyle.sources.bloomberg._get_blp", return_value=mock_blp)
+
+    # Create minimal catalog
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog_path.write_text("""
+- my_name: dummy
+  source: bloomberg
+  symbol: dummy
+""")
+
+    client = Client(catalog=str(catalog_path), cache_enabled=False)
+    df = client.get_raw(
+        source="bloomberg",
+        symbol="SPX Index",
+        start="2024-01-01",
+        end="2024-01-02",
+        field="PX_LAST",
+    )
+
+    assert "SPX Index_PX_LAST" in df.columns
     assert "value" not in df.columns
     client.close()

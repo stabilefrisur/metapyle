@@ -16,6 +16,9 @@ dependencies = [
 bloomberg = [
     "xbbg>=0.6.0",
 ]
+macrobond = [
+    "macrobond-data-api>=0.1.0",
+]
 dev = [
     "mypy>=1.19.1",
     "pytest>=9.0.2",

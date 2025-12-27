@@ -152,9 +152,19 @@ class MacrobondSource(BaseSource):
         return df
 
     def _fetch_unified(self, mda: Any, symbol: str, **kwargs: Any) -> pd.DataFrame:
-        """Fetch using get_unified_series."""
-        # Placeholder for Task 5
-        raise NotImplementedError("Unified mode not yet implemented")
+        """Fetch using get_unified_series with kwargs pass-through."""
+        result = mda.get_unified_series(symbol, **kwargs)
+        df = result.to_pd_data_frame()
+
+        # First column is typically date, rest are values
+        if len(df.columns) < 2:
+            # Malformed response - return empty DataFrame with proper structure
+            return pd.DataFrame(columns=[symbol])
+
+        df.index = pd.to_datetime(df.iloc[:, 0])
+        df = df.iloc[:, 1:2]
+        df.columns = [symbol]
+        return df
 
     def get_metadata(self, symbol: str) -> dict[str, Any]:
         """

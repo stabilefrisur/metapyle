@@ -88,9 +88,7 @@ class TestMacrobondSourceFetch:
 
     def test_fetch_raises_fetch_error_on_api_exception(self) -> None:
         """fetch() wraps API exceptions in FetchError."""
-        with patch(
-            "metapyle.sources.macrobond._get_mda"
-        ) as mock_get_mda:
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
             mock_mda = MagicMock()
             mock_mda.get_one_series.side_effect = Exception("API connection failed")
             mock_get_mda.return_value = mock_mda
@@ -118,6 +116,62 @@ class TestMacrobondSourceFetch:
             source = MacrobondSource()
             with pytest.raises(NoDataError, match="No data in date range"):
                 source.fetch("usgdp", "2020-01-01", "2020-12-31")
+
+
+class TestMacrobondSourceFetchUnified:
+    """Tests for MacrobondSource.fetch() with unified=True."""
+
+    def test_fetch_unified_calls_get_unified_series(self) -> None:
+        """fetch(unified=True) calls get_unified_series instead of get_one_series."""
+        mock_result = MagicMock()
+        mock_result.to_pd_data_frame.return_value = pd.DataFrame(
+            {
+                "Date": pd.to_datetime(["2020-01-01", "2020-02-01"]),
+                "usgdp": [100.0, 101.0],
+            }
+        )
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_unified_series.return_value = mock_result
+            mock_get_mda.return_value = mock_mda
+
+            source = MacrobondSource()
+            df = source.fetch("usgdp", "2020-01-01", "2020-12-31", unified=True)
+
+            mock_mda.get_unified_series.assert_called_once()
+            mock_mda.get_one_series.assert_not_called()
+            assert isinstance(df, pd.DataFrame)
+            assert "usgdp" in df.columns
+
+    def test_fetch_unified_passes_kwargs(self) -> None:
+        """fetch(unified=True) passes kwargs to get_unified_series."""
+        mock_result = MagicMock()
+        mock_result.to_pd_data_frame.return_value = pd.DataFrame(
+            {
+                "Date": pd.to_datetime(["2020-01-01"]),
+                "usgdp": [100.0],
+            }
+        )
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_unified_series.return_value = mock_result
+            mock_get_mda.return_value = mock_mda
+
+            source = MacrobondSource()
+            source.fetch(
+                "usgdp",
+                "2020-01-01",
+                "2020-12-31",
+                unified=True,
+                frequency="annual",
+                currency="USD",
+            )
+
+            call_kwargs = mock_mda.get_unified_series.call_args
+            assert call_kwargs[1].get("frequency") == "annual"
+            assert call_kwargs[1].get("currency") == "USD"
 
 
 class TestMacrobondSourceIsRegistered:

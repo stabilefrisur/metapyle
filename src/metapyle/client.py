@@ -200,7 +200,7 @@ class Client:
                 source=entry.source,
                 symbol=entry.symbol,
                 field=entry.field,
-                path=None,
+                path=entry.path,
                 start_date=start,
                 end_date=end,
             )
@@ -219,6 +219,8 @@ class Client:
         kwargs: dict[str, str] = {}
         if entry.field is not None:
             kwargs["field"] = entry.field
+        if entry.path is not None:
+            kwargs["path"] = entry.path
 
         logger.debug(
             "fetch_from_source: symbol=%s, source=%s, range=%s/%s",
@@ -236,7 +238,7 @@ class Client:
                 source=entry.source,
                 symbol=entry.symbol,
                 field=entry.field,
-                path=None,
+                path=entry.path,
                 start_date=start,
                 end_date=end,
                 data=df,
@@ -248,28 +250,27 @@ class Client:
         """
         Assemble individual DataFrames into a wide DataFrame.
 
+        Renames source columns to my_name from catalog.
+
         Parameters
         ----------
         dfs : dict[str, pd.DataFrame]
-            Dictionary mapping symbol names to DataFrames.
+            Dictionary mapping my_name to DataFrames.
 
         Returns
         -------
         pd.DataFrame
-            Wide DataFrame with columns named by symbol names.
+            Wide DataFrame with columns named by my_name.
         """
         if not dfs:
             return pd.DataFrame()
 
-        # Rename 'value' column to symbol name and concatenate
+        # Rename first column to my_name and concatenate
         renamed: list[pd.DataFrame] = []
-        for name, df in dfs.items():
-            if "value" in df.columns:
-                renamed.append(df[["value"]].rename(columns={"value": name}))
-            else:
-                # If no 'value' column, use first column
-                col = df.columns[0]
-                renamed.append(df[[col]].rename(columns={col: name}))
+        for my_name, df in dfs.items():
+            # Take first column regardless of name, rename to my_name
+            col = df.columns[0]
+            renamed.append(df[[col]].rename(columns={col: my_name}))
 
         result = pd.concat(renamed, axis=1)
         return result

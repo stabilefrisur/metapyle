@@ -537,3 +537,31 @@ def test_client_close(catalog_yaml: Path, cache_path: str) -> None:
     client.close()
     # Calling close again should not raise
     client.close()
+
+
+def test_client_get_renames_to_my_name(tmp_path: Path) -> None:
+    """Client.get() renames source column to my_name."""
+    # Create test CSV
+    csv_path = tmp_path / "data.csv"
+    csv_path.write_text(
+        "date,GDP_US\n"
+        "2024-01-01,100.0\n"
+        "2024-01-02,101.0\n"
+    )
+
+    # Create catalog with path
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog_path.write_text(f"""
+- my_name: gdp_us
+  source: localfile
+  symbol: GDP_US
+  path: {csv_path}
+""")
+
+    client = Client(catalog=str(catalog_path), cache_enabled=False)
+    df = client.get(["gdp_us"], start="2024-01-01", end="2024-01-02")
+
+    assert "gdp_us" in df.columns
+    assert "GDP_US" not in df.columns
+    assert "value" not in df.columns
+    client.close()

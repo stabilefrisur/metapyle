@@ -40,7 +40,8 @@ class BaseSource(ABC):
         Returns
         -------
         pd.DataFrame
-            DataFrame with DatetimeIndex and single column named 'value'.
+            DataFrame with DatetimeIndex and single column with source-specific
+            name (e.g., the symbol name for localfile, field name for Bloomberg).
 
         Raises
         ------

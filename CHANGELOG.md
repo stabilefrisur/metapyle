@@ -7,20 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Add `path` field to catalog entries for localfile source file paths
-- Add `path` parameter to `get_raw()` for ad-hoc localfile queries
-
-### Changed
-
-- **BREAKING:** LocalFile source: `symbol` is now the column name to extract, `path` is the file path
-- **BREAKING:** `get_raw()` returns source-specific column names instead of `value`:
-  - Bloomberg: `symbol_field` (e.g., `SPX Index_PX_LAST`)
-  - LocalFile: original column name from file
-- Cache key now includes `path` for localfile entries
-
-## [0.1.0] - 2025-12-26
+## [0.1.0] - 2025-12-27
 
 ### Added
 
@@ -29,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `get_metadata()` method for retrieving symbol metadata from sources
 - Context manager support for automatic resource cleanup
 - YAML-based catalog system mapping human-readable names to source-specific symbols
+- `path` field in catalog entries for localfile source file paths
+- `path` parameter in `get_raw()` for ad-hoc localfile queries
 - Source validation at client initialization
 - SQLite-based caching layer for offline access and reduced API calls
 - Frequency alignment support using pandas resampling

@@ -63,6 +63,9 @@ follow_imports = "normal"
 
 [[tool.mypy.overrides]]
 module = [
+    "macrobond_data_api",
+    "macrobond_data_api.*",
+    "xbbg",
     "xbbg.*",
     "pandas.*",
     "yaml.*",

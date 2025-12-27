@@ -82,7 +82,8 @@ class BloombergSource(BaseSource):
         Returns
         -------
         pd.DataFrame
-            DataFrame with DatetimeIndex and single column named 'value'.
+            DataFrame with DatetimeIndex and single column named 'symbol_field'
+            (e.g., 'SPX Index_PX_LAST').
 
         Raises
         ------
@@ -114,13 +115,16 @@ class BloombergSource(BaseSource):
             logger.warning("fetch_empty: symbol=%s, field=%s", symbol, field)
             raise NoDataError(f"No data returned for {symbol} with field {field}")
 
-        # Convert MultiIndex columns from bdh response to single 'value' column
+        # Construct column name as symbol_field (e.g., "SPX Index_PX_LAST")
+        col_name = f"{symbol}_{field}"
+
+        # Convert MultiIndex columns from bdh response to symbol_field column
         # bdh returns DataFrame with MultiIndex columns: (ticker, field)
         if isinstance(df.columns, pd.MultiIndex):
             # Extract the first column's data
-            df = df.iloc[:, 0].to_frame(name="value")
+            df = df.iloc[:, 0].to_frame(name=col_name)
         elif len(df.columns) == 1:
-            df = df.rename(columns={df.columns[0]: "value"})
+            df = df.rename(columns={df.columns[0]: col_name})
 
         # Ensure DatetimeIndex
         if not isinstance(df.index, pd.DatetimeIndex):

@@ -31,12 +31,34 @@ class TestBloombergSourceFetchSingleTicker:
 
             assert isinstance(result, pd.DataFrame)
             assert len(result) == 2
-            assert "value" in result.columns
+            assert "SPX Index_PX_LAST" in result.columns
             assert isinstance(result.index, pd.DatetimeIndex)
-            assert result.iloc[0]["value"] == 5000.0
-            assert result.iloc[1]["value"] == 5001.0
+            assert result.iloc[0]["SPX Index_PX_LAST"] == 5000.0
+            assert result.iloc[1]["SPX Index_PX_LAST"] == 5001.0
 
             mock_blp.bdh.assert_called_once_with("SPX Index", "PX_LAST", "2024-01-02", "2024-01-03")
+
+
+class TestBloombergSourceColumnNaming:
+    """Tests for column naming convention."""
+
+    def test_bloomberg_returns_symbol_field_column_name(self) -> None:
+        """Bloomberg source returns column named symbol_field."""
+        mock_df = pd.DataFrame(
+            {("SPX Index", "PX_LAST"): [100.0, 101.0]},
+            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
+        )
+        mock_df.columns = pd.MultiIndex.from_tuples([("SPX Index", "PX_LAST")])
+
+        mock_blp = MagicMock()
+        mock_blp.bdh.return_value = mock_df
+
+        with patch("metapyle.sources.bloomberg._get_blp", return_value=mock_blp):
+            source = BloombergSource()
+            df = source.fetch("SPX Index", "2024-01-01", "2024-01-02", field="PX_LAST")
+
+            assert "SPX Index_PX_LAST" in df.columns
+            assert "value" not in df.columns
 
 
 class TestBloombergSourceFetchCustomField:
@@ -59,8 +81,8 @@ class TestBloombergSourceFetchCustomField:
 
             assert isinstance(result, pd.DataFrame)
             assert len(result) == 2
-            assert "value" in result.columns
-            assert result.iloc[0]["value"] == 150.0
+            assert "AAPL US Equity_PX_OPEN" in result.columns
+            assert result.iloc[0]["AAPL US Equity_PX_OPEN"] == 150.0
 
             mock_blp.bdh.assert_called_once_with(
                 "AAPL US Equity", "PX_OPEN", "2024-01-02", "2024-01-03"

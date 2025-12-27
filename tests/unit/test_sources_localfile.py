@@ -11,7 +11,9 @@ from metapyle.sources.localfile import LocalFileSource
 class TestLocalFileSourceFetch:
     """Tests for LocalFileSource.fetch method."""
 
-    def test_localfile_fetch_extracts_column_by_symbol(self, tmp_path: pytest.TempPathFactory) -> None:
+    def test_localfile_fetch_extracts_column_by_symbol(
+        self, tmp_path: pytest.TempPathFactory
+    ) -> None:
         """Fetch extracts specific column from CSV using symbol as column name."""
         csv_path = tmp_path / "data.csv"
         csv_path.write_text(
@@ -28,14 +30,12 @@ class TestLocalFileSourceFetch:
         assert len(df) == 3
         assert df["GDP_US"].iloc[0] == 100.0
 
-    def test_localfile_fetch_returns_original_column_name(self, tmp_path: pytest.TempPathFactory) -> None:
+    def test_localfile_fetch_returns_original_column_name(
+        self, tmp_path: pytest.TempPathFactory
+    ) -> None:
         """Fetch returns DataFrame with original column name, not 'value'."""
         csv_path = tmp_path / "data.csv"
-        csv_path.write_text(
-            "date,MyColumn\n"
-            "2024-01-01,1.0\n"
-            "2024-01-02,2.0\n"
-        )
+        csv_path.write_text("date,MyColumn\n2024-01-01,1.0\n2024-01-02,2.0\n")
 
         source = LocalFileSource()
         df = source.fetch("MyColumn", "2024-01-01", "2024-01-02", path=str(csv_path))
@@ -53,10 +53,7 @@ class TestLocalFileSourceFetch:
     def test_localfile_fetch_column_not_found(self, tmp_path: pytest.TempPathFactory) -> None:
         """Fetch raises FetchError if column not found in file."""
         csv_path = tmp_path / "data.csv"
-        csv_path.write_text(
-            "date,OTHER_COL\n"
-            "2024-01-01,1.0\n"
-        )
+        csv_path.write_text("date,OTHER_COL\n2024-01-01,1.0\n")
 
         source = LocalFileSource()
 
@@ -92,10 +89,7 @@ class TestLocalFileSourceFetch:
     def test_localfile_fetch_no_data_in_range(self, tmp_path: pytest.TempPathFactory) -> None:
         """Fetch raises NoDataError if no data in date range."""
         csv_path = tmp_path / "data.csv"
-        csv_path.write_text(
-            "date,GDP_US\n"
-            "2024-01-01,100.0\n"
-        )
+        csv_path.write_text("date,GDP_US\n2024-01-01,100.0\n")
 
         source = LocalFileSource()
 
@@ -121,10 +115,12 @@ class TestLocalFileSourceParquet:
         pytest.importorskip("pyarrow")
 
         parquet_path = tmp_path / "data.parquet"
-        df = pd.DataFrame({
-            "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
-            "GDP_US": [100.0, 101.0],
-        })
+        df = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
+                "GDP_US": [100.0, 101.0],
+            }
+        )
         df.to_parquet(parquet_path, index=False)
 
         source = LocalFileSource()

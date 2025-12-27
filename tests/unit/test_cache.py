@@ -239,12 +239,8 @@ class TestCacheWithPath:
         )
 
         # Store with different paths
-        cache.put(
-            "localfile", "GDP_US", None, "/data/file1.csv", "2024-01-01", "2024-01-02", df1
-        )
-        cache.put(
-            "localfile", "GDP_US", None, "/data/file2.csv", "2024-01-01", "2024-01-02", df2
-        )
+        cache.put("localfile", "GDP_US", None, "/data/file1.csv", "2024-01-01", "2024-01-02", df1)
+        cache.put("localfile", "GDP_US", None, "/data/file2.csv", "2024-01-01", "2024-01-02", df2)
 
         # Retrieve by path
         result1 = cache.get(

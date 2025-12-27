@@ -8,7 +8,9 @@ for managing source adapters.
 from metapyle.sources import (
     bloomberg,  # noqa: F401
     localfile,  # noqa: F401
+    macrobond,  # noqa: F401
 )
 from metapyle.sources.base import BaseSource, SourceRegistry, register_source
+from metapyle.sources.macrobond import MacrobondSource
 
-__all__ = ["BaseSource", "SourceRegistry", "register_source"]
+__all__ = ["BaseSource", "MacrobondSource", "SourceRegistry", "register_source"]

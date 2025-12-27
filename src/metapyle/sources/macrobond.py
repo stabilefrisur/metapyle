@@ -3,13 +3,12 @@
 import logging
 from typing import Any
 
-import pandas as pd  # noqa: F401  # Used in Task 2
+import pandas as pd
 
-from metapyle.exceptions import FetchError, NoDataError  # noqa: F401  # Used in Task 2
-from metapyle.sources.base import BaseSource, register_source  # noqa: F401  # Used in Task 2
+from metapyle.exceptions import FetchError, NoDataError  # noqa: F401
+from metapyle.sources.base import BaseSource, register_source
 
-# __all__ will be populated when MacrobondSource class is added in Task 2
-__all__: list[str] = []
+__all__ = ["MacrobondSource"]
 
 logger = logging.getLogger(__name__)
 
@@ -39,3 +38,79 @@ def _get_mda() -> Any:
             _MDA_AVAILABLE = False
 
     return _mda_module
+
+
+@register_source("macrobond")
+class MacrobondSource(BaseSource):
+    """Source adapter for Macrobond data via macrobond_data_api.
+
+    Uses macrobond_data_api for data retrieval. Automatically detects
+    whether to use ComClient (desktop app) or WebClient (API credentials).
+
+    Examples
+    --------
+    >>> source = MacrobondSource()
+    >>> df = source.fetch("usgdp", "2020-01-01", "2024-12-31")
+    """
+
+    def fetch(
+        self,
+        symbol: str,
+        start: str,
+        end: str,
+        *,
+        unified: bool = False,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
+        """
+        Fetch time-series data from Macrobond.
+
+        Parameters
+        ----------
+        symbol : str
+            Macrobond series name (e.g., "usgdp", "gbcpi").
+        start : str
+            Start date in ISO format (YYYY-MM-DD).
+        end : str
+            End date in ISO format (YYYY-MM-DD).
+        unified : bool, optional
+            If True, use get_unified_series with kwargs pass-through.
+            If False (default), use get_one_series.
+        **kwargs : Any
+            Additional parameters passed to get_unified_series when unified=True.
+            E.g., frequency, currency, calendar_merge_mode.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with DatetimeIndex and single column named by symbol.
+
+        Raises
+        ------
+        FetchError
+            If macrobond_data_api is not available or API call fails.
+        NoDataError
+            If no data is returned for the symbol.
+        """
+        raise NotImplementedError
+
+    def get_metadata(self, symbol: str) -> dict[str, Any]:
+        """
+        Retrieve metadata for a Macrobond symbol.
+
+        Parameters
+        ----------
+        symbol : str
+            Macrobond series name.
+
+        Returns
+        -------
+        dict[str, Any]
+            Metadata dictionary containing series information.
+
+        Raises
+        ------
+        FetchError
+            If macrobond_data_api is not available or API call fails.
+        """
+        raise NotImplementedError

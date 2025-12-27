@@ -96,6 +96,27 @@ def test_catalog_entry_uses_slots() -> None:
     assert not hasattr(entry, "__dict__")
 
 
+def test_catalog_entry_path_field() -> None:
+    """CatalogEntry supports optional path field."""
+    entry = CatalogEntry(
+        my_name="gdp_us",
+        source="localfile",
+        symbol="GDP_US",
+        path="/data/macro.csv",
+    )
+    assert entry.path == "/data/macro.csv"
+
+
+def test_catalog_entry_path_defaults_none() -> None:
+    """CatalogEntry path defaults to None."""
+    entry = CatalogEntry(
+        my_name="test",
+        source="bloomberg",
+        symbol="SPX Index",
+    )
+    assert entry.path is None
+
+
 # ============================================================================
 # Catalog Tests
 # ============================================================================

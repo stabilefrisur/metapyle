@@ -36,6 +36,8 @@ class CatalogEntry:
         Source-specific identifier (e.g., "SPX Index").
     field : str | None, optional
         Source-specific field name (e.g., "PX_LAST" for Bloomberg).
+    path : str | None, optional
+        File path for localfile source (e.g., "/data/macro.csv").
     description : str | None, optional
         Human-readable description of the data series.
     unit : str | None, optional
@@ -46,6 +48,7 @@ class CatalogEntry:
     source: str
     symbol: str
     field: str | None = None
+    path: str | None = None
     description: str | None = None
     unit: str | None = None
 
@@ -132,6 +135,7 @@ class Catalog:
             source=raw["source"],
             symbol=raw["symbol"],
             field=raw.get("field"),
+            path=raw.get("path"),
             description=raw.get("description"),
             unit=raw.get("unit"),
         )

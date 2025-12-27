@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from metapyle.exceptions import FetchError, NoDataError  # noqa: F401
+from metapyle.exceptions import FetchError, NoDataError
 from metapyle.sources.base import BaseSource, register_source
 
 __all__ = ["MacrobondSource"]
@@ -92,7 +92,69 @@ class MacrobondSource(BaseSource):
         NoDataError
             If no data is returned for the symbol.
         """
-        raise NotImplementedError
+        mda = _get_mda()
+        if mda is None:
+            logger.error("fetch_failed: symbol=%s, reason=mda_not_installed", symbol)
+            raise FetchError(
+                "macrobond_data_api package is not installed. "
+                "Install with: pip install macrobond-data-api"
+            )
+
+        logger.debug(
+            "fetch_start: symbol=%s, start=%s, end=%s, unified=%s",
+            symbol,
+            start,
+            end,
+            unified,
+        )
+
+        try:
+            if unified:
+                df = self._fetch_unified(mda, symbol, **kwargs)
+            else:
+                df = self._fetch_raw(mda, symbol)
+        except (FetchError, NoDataError, NotImplementedError):
+            raise
+        except Exception as e:
+            logger.error("fetch_failed: symbol=%s, error=%s", symbol, str(e))
+            raise FetchError(f"Macrobond API error for {symbol}: {e}") from e
+
+        if df.empty:
+            logger.warning("fetch_empty: symbol=%s", symbol)
+            raise NoDataError(f"No data returned for {symbol}")
+
+        # Filter by date range
+        start_dt = pd.Timestamp(start)
+        end_dt = pd.Timestamp(end)
+        mask = (df.index >= start_dt) & (df.index <= end_dt)
+        df_filtered = df.loc[mask]
+
+        if df_filtered.empty:
+            logger.warning(
+                "fetch_no_data_in_range: symbol=%s, start=%s, end=%s",
+                symbol,
+                start,
+                end,
+            )
+            raise NoDataError(f"No data in date range {start} to {end} for {symbol}")
+
+        logger.info("fetch_complete: symbol=%s, rows=%d", symbol, len(df_filtered))
+        return df_filtered
+
+    def _fetch_raw(self, mda: Any, symbol: str) -> pd.DataFrame:
+        """Fetch using get_one_series."""
+        series = mda.get_one_series(symbol)
+        df = series.values_to_pd_data_frame()
+
+        # Convert to proper DataFrame structure
+        df.index = pd.to_datetime(df["date"])
+        df = df[["value"]].rename(columns={"value": symbol})
+        return df
+
+    def _fetch_unified(self, mda: Any, symbol: str, **kwargs: Any) -> pd.DataFrame:
+        """Fetch using get_unified_series."""
+        # Placeholder for Task 5
+        raise NotImplementedError("Unified mode not yet implemented")
 
     def get_metadata(self, symbol: str) -> dict[str, Any]:
         """

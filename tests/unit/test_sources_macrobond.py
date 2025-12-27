@@ -99,6 +99,26 @@ class TestMacrobondSourceFetch:
             with pytest.raises(FetchError, match="API"):
                 source.fetch("usgdp", "2020-01-01", "2020-12-31")
 
+    def test_fetch_raises_no_data_error_when_no_data_in_range(self) -> None:
+        """fetch() raises NoDataError when data exists but none in requested range."""
+        mock_series = MagicMock()
+        # Data exists but outside requested range
+        mock_series.values_to_pd_data_frame.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2019-01-01", "2019-06-01", "2019-12-01"]),
+                "value": [97.0, 98.0, 99.0],
+            }
+        )
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_one_series.return_value = mock_series
+            mock_get_mda.return_value = mock_mda
+
+            source = MacrobondSource()
+            with pytest.raises(NoDataError, match="No data in date range"):
+                source.fetch("usgdp", "2020-01-01", "2020-12-31")
+
 
 class TestMacrobondSourceIsRegistered:
     """Tests for MacrobondSource source registration."""

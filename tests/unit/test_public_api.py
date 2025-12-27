@@ -49,4 +49,8 @@ def test_version_available() -> None:
     import metapyle
 
     assert hasattr(metapyle, "__version__")
-    assert metapyle.__version__ == "0.1.0"
+    # Check version format (X.Y.Z) rather than hardcoded value
+    assert metapyle.__version__  # Non-empty
+    parts = metapyle.__version__.split(".")
+    assert len(parts) == 3  # Major.Minor.Patch
+    assert all(part.isdigit() for part in parts)

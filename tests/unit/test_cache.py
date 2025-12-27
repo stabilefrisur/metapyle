@@ -41,10 +41,10 @@ class TestCacheInitialization:
 
         # Put should be no-op
         df = pd.DataFrame({"date": ["2024-01-01"], "value": [100.0]})
-        cache.put("source", "symbol", None, "2024-01-01", "2024-01-31", df)
+        cache.put("source", "symbol", None, None, "2024-01-01", "2024-01-31", df)
 
         # Get should return None
-        result = cache.get("source", "symbol", None, "2024-01-01", "2024-01-31")
+        result = cache.get("source", "symbol", None, None, "2024-01-01", "2024-01-31")
         assert result is None
 
         cache.close()
@@ -63,10 +63,10 @@ class TestCachePutAndGet:
         df = pd.DataFrame({"value": [1.0, 2.0, 3.0, 4.0, 5.0]}, index=dates)
 
         # Store data
-        cache.put("test_source", "TEST_SYM", "close", "2024-01-01", "2024-01-05", df)
+        cache.put("test_source", "TEST_SYM", "close", None, "2024-01-01", "2024-01-05", df)
 
         # Retrieve data
-        result = cache.get("test_source", "TEST_SYM", "close", "2024-01-01", "2024-01-05")
+        result = cache.get("test_source", "TEST_SYM", "close", None, "2024-01-01", "2024-01-05")
 
         assert result is not None
         assert len(result) == 5
@@ -78,7 +78,7 @@ class TestCachePutAndGet:
         db_path = tmp_path / "test_cache.db"
         cache = Cache(path=str(db_path))
 
-        result = cache.get("nonexistent", "SYMBOL", None, "2024-01-01", "2024-01-31")
+        result = cache.get("nonexistent", "SYMBOL", None, None, "2024-01-01", "2024-01-31")
 
         assert result is None
         cache.close()
@@ -91,10 +91,10 @@ class TestCachePutAndGet:
         # Cache data for full month
         dates = pd.date_range("2024-01-01", "2024-01-31", freq="D")
         df = pd.DataFrame({"value": range(1, 32)}, index=dates)
-        cache.put("source", "SYM", "price", "2024-01-01", "2024-01-31", df)
+        cache.put("source", "SYM", "price", None, "2024-01-01", "2024-01-31", df)
 
         # Request subset (middle of month)
-        result = cache.get("source", "SYM", "price", "2024-01-10", "2024-01-20")
+        result = cache.get("source", "SYM", "price", None, "2024-01-10", "2024-01-20")
 
         assert result is not None
         # Should return only data within requested range
@@ -111,18 +111,18 @@ class TestCachePutAndGet:
         # Cache partial data
         dates = pd.date_range("2024-01-10", "2024-01-20", freq="D")
         df = pd.DataFrame({"value": range(10, 21)}, index=dates)
-        cache.put("source", "SYM", "price", "2024-01-10", "2024-01-20", df)
+        cache.put("source", "SYM", "price", None, "2024-01-10", "2024-01-20", df)
 
         # Request larger range (starts before cached)
-        result = cache.get("source", "SYM", "price", "2024-01-01", "2024-01-20")
+        result = cache.get("source", "SYM", "price", None, "2024-01-01", "2024-01-20")
         assert result is None
 
         # Request larger range (ends after cached)
-        result = cache.get("source", "SYM", "price", "2024-01-10", "2024-01-31")
+        result = cache.get("source", "SYM", "price", None, "2024-01-10", "2024-01-31")
         assert result is None
 
         # Request completely outside cached range
-        result = cache.get("source", "SYM", "price", "2024-02-01", "2024-02-28")
+        result = cache.get("source", "SYM", "price", None, "2024-02-01", "2024-02-28")
         assert result is None
 
         cache.close()
@@ -136,16 +136,16 @@ class TestCachePutAndGet:
         df = pd.DataFrame({"value": [1.0, 2.0, 3.0, 4.0, 5.0]}, index=dates)
 
         # Store with None field
-        cache.put("source", "SYM", None, "2024-01-01", "2024-01-05", df)
+        cache.put("source", "SYM", None, None, "2024-01-01", "2024-01-05", df)
 
         # Retrieve with None field
-        result = cache.get("source", "SYM", None, "2024-01-01", "2024-01-05")
+        result = cache.get("source", "SYM", None, None, "2024-01-01", "2024-01-05")
 
         assert result is not None
         assert len(result) == 5
 
         # Different field should not match
-        result_different = cache.get("source", "SYM", "close", "2024-01-01", "2024-01-05")
+        result_different = cache.get("source", "SYM", "close", None, "2024-01-01", "2024-01-05")
         assert result_different is None
 
         cache.close()
@@ -159,14 +159,14 @@ class TestCachePutAndGet:
 
         # Store initial data
         df1 = pd.DataFrame({"value": [1.0, 2.0, 3.0, 4.0, 5.0]}, index=dates)
-        cache.put("source", "SYM", "price", "2024-01-01", "2024-01-05", df1)
+        cache.put("source", "SYM", "price", None, "2024-01-01", "2024-01-05", df1)
 
         # Overwrite with new data
         df2 = pd.DataFrame({"value": [10.0, 20.0, 30.0, 40.0, 50.0]}, index=dates)
-        cache.put("source", "SYM", "price", "2024-01-01", "2024-01-05", df2)
+        cache.put("source", "SYM", "price", None, "2024-01-01", "2024-01-05", df2)
 
         # Retrieve should return new data
-        result = cache.get("source", "SYM", "price", "2024-01-01", "2024-01-05")
+        result = cache.get("source", "SYM", "price", None, "2024-01-01", "2024-01-05")
 
         assert result is not None
         assert list(result["value"]) == [10.0, 20.0, 30.0, 40.0, 50.0]
@@ -185,15 +185,15 @@ class TestCacheClear:
         df = pd.DataFrame({"value": [1.0, 2.0, 3.0, 4.0, 5.0]}, index=dates)
 
         # Store multiple entries
-        cache.put("source1", "SYM1", "price", "2024-01-01", "2024-01-05", df)
-        cache.put("source2", "SYM2", "volume", "2024-01-01", "2024-01-05", df)
+        cache.put("source1", "SYM1", "price", None, "2024-01-01", "2024-01-05", df)
+        cache.put("source2", "SYM2", "volume", None, "2024-01-01", "2024-01-05", df)
 
         # Clear all
         cache.clear()
 
         # Both should be gone
-        assert cache.get("source1", "SYM1", "price", "2024-01-01", "2024-01-05") is None
-        assert cache.get("source2", "SYM2", "volume", "2024-01-01", "2024-01-05") is None
+        assert cache.get("source1", "SYM1", "price", None, "2024-01-01", "2024-01-05") is None
+        assert cache.get("source2", "SYM2", "volume", None, "2024-01-01", "2024-01-05") is None
         cache.close()
 
     def test_cache_clear_specific_symbol(self, tmp_path: Path) -> None:
@@ -205,17 +205,58 @@ class TestCacheClear:
         df = pd.DataFrame({"value": [1.0, 2.0, 3.0, 4.0, 5.0]}, index=dates)
 
         # Store multiple entries
-        cache.put("source", "SYM1", "price", "2024-01-01", "2024-01-05", df)
-        cache.put("source", "SYM2", "price", "2024-01-01", "2024-01-05", df)
-        cache.put("other", "SYM1", "price", "2024-01-01", "2024-01-05", df)
+        cache.put("source", "SYM1", "price", None, "2024-01-01", "2024-01-05", df)
+        cache.put("source", "SYM2", "price", None, "2024-01-01", "2024-01-05", df)
+        cache.put("other", "SYM1", "price", None, "2024-01-01", "2024-01-05", df)
 
         # Clear only source/SYM1
         cache.clear(source="source", symbol="SYM1")
 
         # source/SYM1 should be gone
-        assert cache.get("source", "SYM1", "price", "2024-01-01", "2024-01-05") is None
+        assert cache.get("source", "SYM1", "price", None, "2024-01-01", "2024-01-05") is None
 
         # Others should remain
-        assert cache.get("source", "SYM2", "price", "2024-01-01", "2024-01-05") is not None
-        assert cache.get("other", "SYM1", "price", "2024-01-01", "2024-01-05") is not None
+        assert cache.get("source", "SYM2", "price", None, "2024-01-01", "2024-01-05") is not None
+        assert cache.get("other", "SYM1", "price", None, "2024-01-01", "2024-01-05") is not None
+        cache.close()
+
+
+class TestCacheWithPath:
+    """Tests for Cache path field in cache key."""
+
+    def test_cache_with_path(self, tmp_path: Path) -> None:
+        """Cache distinguishes entries by path."""
+        cache_path = str(tmp_path / "test.db")
+        cache = Cache(path=cache_path)
+
+        df1 = pd.DataFrame(
+            {"value": [1.0, 2.0]},
+            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
+        )
+        df2 = pd.DataFrame(
+            {"value": [10.0, 20.0]},
+            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
+        )
+
+        # Store with different paths
+        cache.put(
+            "localfile", "GDP_US", None, "/data/file1.csv", "2024-01-01", "2024-01-02", df1
+        )
+        cache.put(
+            "localfile", "GDP_US", None, "/data/file2.csv", "2024-01-01", "2024-01-02", df2
+        )
+
+        # Retrieve by path
+        result1 = cache.get(
+            "localfile", "GDP_US", None, "/data/file1.csv", "2024-01-01", "2024-01-02"
+        )
+        result2 = cache.get(
+            "localfile", "GDP_US", None, "/data/file2.csv", "2024-01-01", "2024-01-02"
+        )
+
+        assert result1 is not None
+        assert result2 is not None
+        assert result1["value"].iloc[0] == 1.0
+        assert result2["value"].iloc[0] == 10.0
+
         cache.close()

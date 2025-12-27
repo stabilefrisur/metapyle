@@ -200,6 +200,7 @@ class Client:
                 source=entry.source,
                 symbol=entry.symbol,
                 field=entry.field,
+                path=None,
                 start_date=start,
                 end_date=end,
             )
@@ -235,6 +236,7 @@ class Client:
                 source=entry.source,
                 symbol=entry.symbol,
                 field=entry.field,
+                path=None,
                 start_date=start,
                 end_date=end,
                 data=df,
@@ -386,6 +388,7 @@ class Client:
                 source=source,
                 symbol=symbol,
                 field=field,
+                path=None,
                 start_date=start,
                 end_date=end,
             )
@@ -408,6 +411,7 @@ class Client:
                 source=source,
                 symbol=symbol,
                 field=field,
+                path=None,
                 start_date=start,
                 end_date=end,
                 data=df,

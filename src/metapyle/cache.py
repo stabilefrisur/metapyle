@@ -60,6 +60,18 @@ class Cache:
 
         self._conn = sqlite3.connect(self._path)
 
+        # Check if migration is needed (old schema without path column)
+        cursor = self._conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='cache_entries'"
+        )
+        row = cursor.fetchone()
+        if row is not None and "path TEXT" not in row[0]:
+            # Old schema detected, drop tables and recreate
+            logger.info("cache_migration: dropping old schema without path column")
+            self._conn.execute("DROP TABLE IF EXISTS cache_data")
+            self._conn.execute("DROP TABLE IF EXISTS cache_entries")
+            self._conn.commit()
+
         # Create cache_entries table for metadata
         self._conn.execute("""
             CREATE TABLE IF NOT EXISTS cache_entries (
@@ -67,10 +79,11 @@ class Cache:
                 source TEXT NOT NULL,
                 symbol TEXT NOT NULL,
                 field TEXT,
+                path TEXT,
                 start_date TEXT NOT NULL,
                 end_date TEXT NOT NULL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(source, symbol, field, start_date, end_date)
+                UNIQUE(source, symbol, field, path, start_date, end_date)
             )
         """)
 
@@ -87,7 +100,7 @@ class Cache:
         # Create index for faster lookups
         self._conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_cache_lookup
-            ON cache_entries(source, symbol, field)
+            ON cache_entries(source, symbol, field, path)
         """)
 
         self._conn.commit()
@@ -98,6 +111,7 @@ class Cache:
         source: str,
         symbol: str,
         field: str | None,
+        path: str | None,
         start_date: str,
         end_date: str,
         data: pd.DataFrame,
@@ -113,6 +127,8 @@ class Cache:
             Source-specific symbol.
         field : str | None
             Field name (can be None for sources without fields).
+        path : str | None
+            Source path (e.g., file path for localfile source).
         start_date : str
             Start date in ISO format (YYYY-MM-DD).
         end_date : str
@@ -131,15 +147,15 @@ class Cache:
             data_bytes = data.to_parquet()
 
             # Delete existing entry if present (for overwrite)
-            self._delete_entry(source, symbol, field, start_date, end_date)
+            self._delete_entry(source, symbol, field, path, start_date, end_date)
 
             # Insert new entry
             cursor = self._conn.execute(
                 """
-                INSERT INTO cache_entries (source, symbol, field, start_date, end_date)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO cache_entries (source, symbol, field, path, start_date, end_date)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (source, symbol, field, start_date, end_date),
+                (source, symbol, field, path, start_date, end_date),
             )
             entry_id = cursor.lastrowid
 
@@ -154,19 +170,21 @@ class Cache:
 
             self._conn.commit()
             logger.debug(
-                "cache_put: source=%s, symbol=%s, field=%s, range=%s/%s",
+                "cache_put: source=%s, symbol=%s, field=%s, path=%s, range=%s/%s",
                 source,
                 symbol,
                 field,
+                path,
                 start_date,
                 end_date,
             )
         except Exception:
             logger.warning(
-                "cache_put_failed: source=%s, symbol=%s, field=%s, range=%s/%s",
+                "cache_put_failed: source=%s, symbol=%s, field=%s, path=%s, range=%s/%s",
                 source,
                 symbol,
                 field,
+                path,
                 start_date,
                 end_date,
                 exc_info=True,
@@ -177,6 +195,7 @@ class Cache:
         source: str,
         symbol: str,
         field: str | None,
+        path: str | None,
         start_date: str,
         end_date: str,
     ) -> pd.DataFrame | None:
@@ -193,6 +212,8 @@ class Cache:
             Source-specific symbol.
         field : str | None
             Field name (can be None for sources without fields).
+        path : str | None
+            Source path (e.g., file path for localfile source).
         start_date : str
             Start date in ISO format (YYYY-MM-DD).
         end_date : str
@@ -211,8 +232,8 @@ class Cache:
 
         try:
             # Find a cached entry that covers the requested range
-            # field can be None, so we need special handling
-            if field is None:
+            # field and path can be None, so we need special handling
+            if field is None and path is None:
                 cursor = self._conn.execute(
                     """
                     SELECT ce.id, ce.start_date, ce.end_date, cd.data
@@ -221,12 +242,28 @@ class Cache:
                     WHERE ce.source = ?
                       AND ce.symbol = ?
                       AND ce.field IS NULL
+                      AND ce.path IS NULL
                       AND ce.start_date <= ?
                       AND ce.end_date >= ?
                     """,
                     (source, symbol, start_date, end_date),
                 )
-            else:
+            elif field is None and path is not None:
+                cursor = self._conn.execute(
+                    """
+                    SELECT ce.id, ce.start_date, ce.end_date, cd.data
+                    FROM cache_entries ce
+                    JOIN cache_data cd ON cd.entry_id = ce.id
+                    WHERE ce.source = ?
+                      AND ce.symbol = ?
+                      AND ce.field IS NULL
+                      AND ce.path = ?
+                      AND ce.start_date <= ?
+                      AND ce.end_date >= ?
+                    """,
+                    (source, symbol, path, start_date, end_date),
+                )
+            elif field is not None and path is None:
                 cursor = self._conn.execute(
                     """
                     SELECT ce.id, ce.start_date, ce.end_date, cd.data
@@ -235,19 +272,36 @@ class Cache:
                     WHERE ce.source = ?
                       AND ce.symbol = ?
                       AND ce.field = ?
+                      AND ce.path IS NULL
                       AND ce.start_date <= ?
                       AND ce.end_date >= ?
                     """,
                     (source, symbol, field, start_date, end_date),
                 )
+            else:  # field is not None and path is not None
+                cursor = self._conn.execute(
+                    """
+                    SELECT ce.id, ce.start_date, ce.end_date, cd.data
+                    FROM cache_entries ce
+                    JOIN cache_data cd ON cd.entry_id = ce.id
+                    WHERE ce.source = ?
+                      AND ce.symbol = ?
+                      AND ce.field = ?
+                      AND ce.path = ?
+                      AND ce.start_date <= ?
+                      AND ce.end_date >= ?
+                    """,
+                    (source, symbol, field, path, start_date, end_date),
+                )
 
             row = cursor.fetchone()
             if row is None:
                 logger.debug(
-                    "cache_miss: source=%s, symbol=%s, field=%s, range=%s/%s",
+                    "cache_miss: source=%s, symbol=%s, field=%s, path=%s, range=%s/%s",
                     source,
                     symbol,
                     field,
+                    path,
                     start_date,
                     end_date,
                 )
@@ -266,20 +320,22 @@ class Cache:
                 df = df[(df.index >= start_dt) & (df.index <= end_dt)]
 
             logger.debug(
-                "cache_hit: source=%s, symbol=%s, field=%s, range=%s/%s",
+                "cache_hit: source=%s, symbol=%s, field=%s, path=%s, range=%s/%s",
                 source,
                 symbol,
                 field,
+                path,
                 start_date,
                 end_date,
             )
             return df
         except Exception:
             logger.warning(
-                "cache_get_failed: source=%s, symbol=%s, field=%s, range=%s/%s",
+                "cache_get_failed: source=%s, symbol=%s, field=%s, path=%s, range=%s/%s",
                 source,
                 symbol,
                 field,
+                path,
                 start_date,
                 end_date,
                 exc_info=True,
@@ -354,6 +410,7 @@ class Cache:
         source: str,
         symbol: str,
         field: str | None,
+        path: str | None,
         start_date: str,
         end_date: str,
     ) -> None:
@@ -361,24 +418,42 @@ class Cache:
         if self._conn is None:
             return
 
-        # Get entry ID
-        if field is None:
+        # Get entry ID - handle all 4 combinations of field/path NULL
+        if field is None and path is None:
             cursor = self._conn.execute(
                 """
                 SELECT id FROM cache_entries
-                WHERE source = ? AND symbol = ? AND field IS NULL
+                WHERE source = ? AND symbol = ? AND field IS NULL AND path IS NULL
                   AND start_date = ? AND end_date = ?
                 """,
                 (source, symbol, start_date, end_date),
             )
-        else:
+        elif field is None and path is not None:
             cursor = self._conn.execute(
                 """
                 SELECT id FROM cache_entries
-                WHERE source = ? AND symbol = ? AND field = ?
+                WHERE source = ? AND symbol = ? AND field IS NULL AND path = ?
+                  AND start_date = ? AND end_date = ?
+                """,
+                (source, symbol, path, start_date, end_date),
+            )
+        elif field is not None and path is None:
+            cursor = self._conn.execute(
+                """
+                SELECT id FROM cache_entries
+                WHERE source = ? AND symbol = ? AND field = ? AND path IS NULL
                   AND start_date = ? AND end_date = ?
                 """,
                 (source, symbol, field, start_date, end_date),
+            )
+        else:  # field is not None and path is not None
+            cursor = self._conn.execute(
+                """
+                SELECT id FROM cache_entries
+                WHERE source = ? AND symbol = ? AND field = ? AND path = ?
+                  AND start_date = ? AND end_date = ?
+                """,
+                (source, symbol, field, path, start_date, end_date),
             )
 
         row = cursor.fetchone()

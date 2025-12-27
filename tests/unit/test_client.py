@@ -304,6 +304,7 @@ def test_client_uses_cache(catalog_yaml: Path, cache_path: str) -> None:
         source=entry.source,
         symbol=entry.symbol,
         field=entry.field,
+        path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
@@ -353,6 +354,7 @@ def test_client_clear_cache(catalog_yaml: Path, cache_path: str) -> None:
         source=entry.source,
         symbol=entry.symbol,
         field=entry.field,
+        path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
@@ -379,6 +381,7 @@ def test_client_clear_cache_specific_symbol(
         source=entry1.source,
         symbol=entry1.symbol,
         field=entry1.field,
+        path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
@@ -390,6 +393,7 @@ def test_client_clear_cache_specific_symbol(
         source=entry2.source,
         symbol=entry2.symbol,
         field=entry2.field,
+        path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
@@ -486,6 +490,7 @@ def test_client_get_raw_uses_cache(catalog_yaml: Path, cache_path: str) -> None:
         source="mock",
         symbol="RAW_CACHED",
         field=None,
+        path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )

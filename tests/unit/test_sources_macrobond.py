@@ -182,3 +182,47 @@ class TestMacrobondSourceIsRegistered:
         from metapyle.sources.base import _global_registry
 
         assert "macrobond" in _global_registry.list_sources()
+
+
+class TestMacrobondSourceGetMetadata:
+    """Tests for MacrobondSource.get_metadata() method."""
+
+    def test_get_metadata_returns_dict(self) -> None:
+        """get_metadata() returns metadata as dict."""
+        mock_entity = MagicMock()
+        mock_entity.metadata = {
+            "FullDescription": "United States, GDP",
+            "Frequency": "quarterly",
+            "DisplayUnit": "USD",
+            "Region": "us",
+        }
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_one_entity.return_value = mock_entity
+            mock_get_mda.return_value = mock_mda
+
+            source = MacrobondSource()
+            metadata = source.get_metadata("usgdp")
+
+            assert isinstance(metadata, dict)
+            assert metadata["FullDescription"] == "United States, GDP"
+            assert metadata["Frequency"] == "quarterly"
+
+    def test_get_metadata_raises_fetch_error_when_mda_not_available(self) -> None:
+        """get_metadata() raises FetchError when macrobond_data_api not installed."""
+        with patch("metapyle.sources.macrobond._get_mda", return_value=None):
+            source = MacrobondSource()
+            with pytest.raises(FetchError, match="macrobond_data_api"):
+                source.get_metadata("usgdp")
+
+    def test_get_metadata_raises_fetch_error_on_api_exception(self) -> None:
+        """get_metadata() wraps API exceptions in FetchError."""
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_one_entity.side_effect = Exception("Entity not found")
+            mock_get_mda.return_value = mock_mda
+
+            source = MacrobondSource()
+            with pytest.raises(FetchError, match="metadata"):
+                source.get_metadata("invalid_symbol")

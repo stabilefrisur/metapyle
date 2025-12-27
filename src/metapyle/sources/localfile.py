@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 class LocalFileSource(BaseSource):
     """Source adapter for reading local CSV and Parquet files.
 
-    The symbol parameter is treated as a file path. Supports CSV files
-    (with date index) and Parquet files.
+    The symbol parameter is the column name to extract from the file.
+    The path to the file is provided via the `path` keyword argument.
 
     Examples
     --------
     >>> source = LocalFileSource()
-    >>> df = source.fetch("/path/to/data.csv", "2020-01-01", "2020-12-31")
+    >>> df = source.fetch("GDP_US", "2020-01-01", "2020-12-31", path="/path/to/data.csv")
     """
 
     def fetch(
@@ -32,6 +32,8 @@ class LocalFileSource(BaseSource):
         symbol: str,
         start: str,
         end: str,
+        *,
+        path: str | None = None,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """
@@ -40,56 +42,67 @@ class LocalFileSource(BaseSource):
         Parameters
         ----------
         symbol : str
-            Path to the data file (CSV or Parquet).
+            Column name to extract from the file.
         start : str
             Start date in ISO format (YYYY-MM-DD).
         end : str
             End date in ISO format (YYYY-MM-DD).
+        path : str | None
+            Path to the data file (CSV or Parquet). Required.
         **kwargs : Any
             Additional parameters (currently unused).
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with DatetimeIndex and single column named 'value'.
+            DataFrame with DatetimeIndex and single column named by symbol.
 
         Raises
         ------
         FetchError
-            If file not found or read fails.
+            If path not provided, file not found, column not found, or read fails.
         NoDataError
             If file is empty or no data in date range.
         """
-        path = Path(symbol)
-        logger.debug("fetch_start: path=%s, start=%s, end=%s", symbol, start, end)
+        if path is None:
+            logger.error("fetch_failed: symbol=%s, reason=path_not_provided", symbol)
+            raise FetchError("path is required for localfile source")
 
-        if not path.exists():
-            logger.error("fetch_failed: path=%s, reason=file_not_found", symbol)
-            raise FetchError(f"File not found: {symbol}")
+        file_path = Path(path)
+        logger.debug("fetch_start: path=%s, symbol=%s, start=%s, end=%s", path, symbol, start, end)
+
+        if not file_path.exists():
+            logger.error("fetch_failed: path=%s, reason=file_not_found", path)
+            raise FetchError(f"File not found: {path}")
 
         try:
-            df = self._read_file(path)
+            df = self._read_file(file_path)
+        except FetchError:
+            raise
         except Exception as e:
-            logger.error("fetch_failed: path=%s, reason=%s", symbol, str(e))
-            raise FetchError(f"Failed to read file: {symbol}") from e
+            logger.error("fetch_failed: path=%s, reason=%s", path, str(e))
+            raise FetchError(f"Failed to read file: {path}") from e
 
         if df.empty:
-            logger.warning("fetch_empty: path=%s, reason=empty_file", symbol)
-            raise NoDataError(f"File is empty: {symbol}")
+            logger.warning("fetch_empty: path=%s, reason=empty_file", path)
+            raise NoDataError(f"File is empty: {path}")
+
+        # Check if requested column exists
+        if symbol not in df.columns:
+            available = ", ".join(str(c) for c in df.columns)
+            logger.error("fetch_failed: path=%s, symbol=%s, reason=column_not_found", path, symbol)
+            raise FetchError(f"Column '{symbol}' not found in {path}. Available: {available}")
+
+        # Extract only the requested column
+        df = df[[symbol]]
 
         # Ensure datetime index
         if not isinstance(df.index, pd.DatetimeIndex):
             try:
                 df.index = pd.to_datetime(df.index)
             except Exception as e:
-                logger.error("fetch_failed: path=%s, reason=invalid_datetime_index", symbol)
-                raise FetchError(f"Cannot convert index to datetime: {symbol}") from e
-
-        # Rename single column to 'value' if needed
-        if len(df.columns) == 1 and df.columns[0] != "value":
-            original_col = df.columns[0]
-            df = df.rename(columns={original_col: "value"})
-            logger.debug("column_renamed: path=%s, from=%s, to=value", symbol, original_col)
+                logger.error("fetch_failed: path=%s, reason=invalid_datetime_index", path)
+                raise FetchError(f"Cannot convert index to datetime: {path}") from e
 
         # Filter by date range using boolean indexing for type safety
         start_dt = pd.Timestamp(start)
@@ -98,10 +111,10 @@ class LocalFileSource(BaseSource):
         df_filtered = df.loc[mask]
 
         if df_filtered.empty:
-            logger.warning("fetch_no_data_in_range: path=%s, start=%s, end=%s", symbol, start, end)
-            raise NoDataError(f"No data in date range {start} to {end}: {symbol}")
+            logger.warning("fetch_no_data_in_range: path=%s, start=%s, end=%s", path, start, end)
+            raise NoDataError(f"No data in date range {start} to {end}: {path}")
 
-        logger.info("fetch_complete: path=%s, rows=%d", symbol, len(df_filtered))
+        logger.info("fetch_complete: path=%s, symbol=%s, rows=%d", path, symbol, len(df_filtered))
         return df_filtered
 
     def _read_file(self, path: Path) -> pd.DataFrame:

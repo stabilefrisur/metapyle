@@ -304,6 +304,7 @@ def test_client_uses_cache(catalog_yaml: Path, cache_path: str) -> None:
         source=entry.source,
         symbol=entry.symbol,
         field=entry.field,
+        path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
@@ -353,6 +354,7 @@ def test_client_clear_cache(catalog_yaml: Path, cache_path: str) -> None:
         source=entry.source,
         symbol=entry.symbol,
         field=entry.field,
+        path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
@@ -379,6 +381,7 @@ def test_client_clear_cache_specific_symbol(
         source=entry1.source,
         symbol=entry1.symbol,
         field=entry1.field,
+        path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
@@ -390,6 +393,7 @@ def test_client_clear_cache_specific_symbol(
         source=entry2.source,
         symbol=entry2.symbol,
         field=entry2.field,
+        path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
@@ -486,6 +490,7 @@ def test_client_get_raw_uses_cache(catalog_yaml: Path, cache_path: str) -> None:
         source="mock",
         symbol="RAW_CACHED",
         field=None,
+        path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
@@ -531,4 +536,93 @@ def test_client_close(catalog_yaml: Path, cache_path: str) -> None:
     client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
     client.close()
     # Calling close again should not raise
+    client.close()
+
+
+def test_client_get_renames_to_my_name(tmp_path: Path) -> None:
+    """Client.get() renames source column to my_name."""
+    # Create test CSV
+    csv_path = tmp_path / "data.csv"
+    csv_path.write_text("date,GDP_US\n2024-01-01,100.0\n2024-01-02,101.0\n")
+
+    # Create catalog with path
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog_path.write_text(f"""
+- my_name: gdp_us
+  source: localfile
+  symbol: GDP_US
+  path: {csv_path}
+""")
+
+    client = Client(catalog=str(catalog_path), cache_enabled=False)
+    df = client.get(["gdp_us"], start="2024-01-01", end="2024-01-02")
+
+    assert "gdp_us" in df.columns
+    assert "GDP_US" not in df.columns
+    assert "value" not in df.columns
+    client.close()
+
+
+def test_client_get_raw_with_path(tmp_path: Path) -> None:
+    """Client.get_raw() accepts path parameter for localfile."""
+    # Create test CSV
+    csv_path = tmp_path / "data.csv"
+    csv_path.write_text("date,GDP_US\n2024-01-01,100.0\n2024-01-02,101.0\n")
+
+    # Create minimal catalog (required for Client init)
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog_path.write_text("""
+- my_name: dummy
+  source: localfile
+  symbol: dummy
+  path: /dummy
+""")
+
+    client = Client(catalog=str(catalog_path), cache_enabled=False)
+    df = client.get_raw(
+        source="localfile",
+        symbol="GDP_US",
+        start="2024-01-01",
+        end="2024-01-02",
+        path=str(csv_path),
+    )
+
+    # get_raw returns original column name
+    assert "GDP_US" in df.columns
+    assert "value" not in df.columns
+    client.close()
+
+
+def test_client_get_raw_bloomberg_returns_symbol_field(
+    tmp_path: Path,
+    mocker: Any,
+) -> None:
+    """Client.get_raw() for Bloomberg returns symbol_field column name."""
+    # Mock Bloomberg
+    mock_blp = mocker.MagicMock()
+    mock_blp.bdh.return_value = pd.DataFrame(
+        {("SPX Index", "PX_LAST"): [100.0, 101.0]},
+        index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
+    )
+    mocker.patch("metapyle.sources.bloomberg._get_blp", return_value=mock_blp)
+
+    # Create minimal catalog
+    catalog_path = tmp_path / "catalog.yaml"
+    catalog_path.write_text("""
+- my_name: dummy
+  source: bloomberg
+  symbol: dummy
+""")
+
+    client = Client(catalog=str(catalog_path), cache_enabled=False)
+    df = client.get_raw(
+        source="bloomberg",
+        symbol="SPX Index",
+        start="2024-01-01",
+        end="2024-01-02",
+        field="PX_LAST",
+    )
+
+    assert "SPX Index_PX_LAST" in df.columns
+    assert "value" not in df.columns
     client.close()

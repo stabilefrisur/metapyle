@@ -539,6 +539,49 @@ def test_client_close(catalog_yaml: Path, cache_path: str) -> None:
     client.close()
 
 
+# ============================================================================
+# Client Default End Date Tests
+# ============================================================================
+
+
+def test_client_get_end_defaults_to_today(
+    catalog_yaml: Path,
+    cache_path: str,
+) -> None:
+    """Client.get() defaults end to today when not specified."""
+    import datetime
+
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+    today = datetime.date.today()
+
+    # end parameter omitted - should default to today
+    df = client.get(["TEST_DAILY"], start="2024-01-01")
+
+    assert isinstance(df, pd.DataFrame)
+    assert len(df) > 0
+    # Last date should be today (or earlier if source doesn't have today's data)
+    assert df.index[-1].date() <= today
+
+
+def test_client_get_raw_end_defaults_to_today(
+    catalog_yaml: Path,
+    cache_path: str,
+) -> None:
+    """Client.get_raw() defaults end to today when not specified."""
+    import datetime
+
+    client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
+    today = datetime.date.today()
+
+    # end parameter omitted - should default to today
+    df = client.get_raw(source="mock", symbol="RAW_SYMBOL", start="2024-01-01")
+
+    assert isinstance(df, pd.DataFrame)
+    assert len(df) > 0
+    # Last date should be today (or earlier if source doesn't have today's data)
+    assert df.index[-1].date() <= today
+
+
 def test_client_get_renames_to_my_name(tmp_path: Path) -> None:
     """Client.get() renames source column to my_name."""
     # Create test CSV

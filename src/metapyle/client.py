@@ -1,5 +1,6 @@
 """Client for querying financial time-series data."""
 
+import datetime
 import logging
 from typing import Any, Self
 
@@ -58,7 +59,7 @@ class Client:
         self,
         symbols: list[str],
         start: str,
-        end: str,
+        end: str | None = None,
         *,
         frequency: str | None = None,
         use_cache: bool = True,
@@ -72,8 +73,8 @@ class Client:
             List of catalog names to fetch.
         start : str
             Start date in ISO format (YYYY-MM-DD).
-        end : str
-            End date in ISO format (YYYY-MM-DD).
+        end : str | None, optional
+            End date in ISO format (YYYY-MM-DD). Defaults to today.
         frequency : str | None, optional
             Pandas frequency string for alignment (e.g., "D", "ME", "QE").
             If omitted, data is returned as-is with a warning if indexes
@@ -95,6 +96,10 @@ class Client:
         ValueError
             If frequency is an invalid pandas frequency string.
         """
+        # Default end to today if not specified
+        if end is None:
+            end = datetime.date.today().isoformat()
+
         # Resolve entries (raises SymbolNotFoundError if not found)
         entries = [self._catalog.get(symbol) for symbol in symbols]
 
@@ -346,7 +351,7 @@ class Client:
         source: str,
         symbol: str,
         start: str,
-        end: str,
+        end: str | None = None,
         *,
         field: str | None = None,
         path: str | None = None,
@@ -365,8 +370,8 @@ class Client:
             Source-specific symbol identifier.
         start : str
             Start date in ISO format (YYYY-MM-DD).
-        end : str
-            End date in ISO format (YYYY-MM-DD).
+        end : str | None, optional
+            End date in ISO format (YYYY-MM-DD). Defaults to today.
         field : str | None, optional
             Source-specific field (e.g., "PX_LAST" for Bloomberg).
         path : str | None, optional
@@ -386,6 +391,10 @@ class Client:
         FetchError
             If data retrieval fails.
         """
+        # Default end to today if not specified
+        if end is None:
+            end = datetime.date.today().isoformat()
+
         # Try cache first
         if use_cache:
             cached = self._cache.get(

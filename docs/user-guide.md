@@ -137,15 +137,15 @@ from metapyle import Client
 # Initialize client with your catalog
 client = Client(catalog="catalog.yaml")
 
-# Fetch a single series
-df = client.get(["sp500_close"], start="2024-01-01", end="2024-12-31")
+# Fetch a single series (end defaults to today)
+df = client.get(["sp500_close"], start="2024-01-01")
 print(df.head())
 #             sp500_close
 # 2024-01-02      4742.83
 # 2024-01-03      4704.81
 # ...
 
-# Fetch multiple series (same frequency)
+# Fetch multiple series with explicit end date
 df = client.get(
     ["sp500_close", "nasdaq_close"],
     start="2024-01-01",
@@ -162,7 +162,8 @@ client.close()
 from metapyle import Client
 
 with Client(catalog="catalog.yaml") as client:
-    df = client.get(["sp500_close"], start="2024-01-01", end="2024-12-31")
+    # end parameter is optional - defaults to today
+    df = client.get(["sp500_close"], start="2024-01-01")
     # Client automatically closes when exiting the block
 ```
 
@@ -283,7 +284,10 @@ The `get()` method fetches data using catalog names. Pass symbols as a **list**,
 from metapyle import Client
 
 with Client(catalog="catalog.yaml") as client:
-    # Single series (note: still a list)
+    # Single series - end defaults to today
+    df = client.get(["sp500_close"], start="2024-01-01")
+    
+    # With explicit end date
     df = client.get(["sp500_close"], start="2024-01-01", end="2024-12-31")
     
     # Multiple series (must have same frequency, or specify frequency param)
@@ -311,13 +315,16 @@ print(df)
 
 ### Date Format
 
-Dates must be in **ISO format** (`YYYY-MM-DD`):
+Dates must be in **ISO format** (`YYYY-MM-DD`). The `end` parameter is optional and defaults to today:
 
 ```python
-# ✅ Correct
+# ✅ Correct - end defaults to today
+df = client.get(["sp500_close"], start="2024-01-01")
+
+# ✅ Correct - explicit end date
 df = client.get(["sp500_close"], start="2024-01-01", end="2024-12-31")
 
-# ❌ Will not work
+# ❌ Will not work - wrong date format
 df = client.get(["sp500_close"], start="01/01/2024", end="12/31/2024")
 ```
 
@@ -327,12 +334,12 @@ Use `get_raw()` for one-off queries that bypass the catalog—useful for explori
 
 ```python
 # Bloomberg: returns column named 'symbol_field'
+# end is optional - defaults to today
 df = client.get_raw(
     source="bloomberg",
     symbol="AAPL US Equity",
     field="PX_LAST",
-    start="2024-01-01",
-    end="2024-12-31"
+    start="2024-01-01"
 )
 print(df.head())
 #             AAPL US Equity_PX_LAST
@@ -345,7 +352,7 @@ df = client.get_raw(
     symbol="GDP_US",           # column name to extract
     path="/data/macro.csv",   # file path
     start="2024-01-01",
-    end="2024-12-31"
+    end="2024-12-31"           # explicit end date
 )
 print(df.head())
 #             GDP_US

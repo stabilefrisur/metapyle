@@ -52,7 +52,8 @@ pip install metapyle[bloomberg]
 from metapyle import Client
 
 with Client(catalog="catalog.yaml") as client:
-    df = client.get(["sp500_close"], start="2024-01-01", end="2024-12-31")
+    # end defaults to today
+    df = client.get(["sp500_close"], start="2024-01-01")
 ```
 
 ## Documentation

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `end` parameter in `get()` and `get_raw()` is now optional, defaulting to today's date
+
 ## [0.1.0] - 2025-12-27
 
 ### Added

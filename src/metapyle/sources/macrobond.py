@@ -185,4 +185,22 @@ class MacrobondSource(BaseSource):
         FetchError
             If macrobond_data_api is not available or API call fails.
         """
-        raise NotImplementedError
+        mda = _get_mda()
+        if mda is None:
+            logger.error("get_metadata_failed: symbol=%s, reason=mda_not_installed", symbol)
+            raise FetchError(
+                "macrobond_data_api package is not installed. "
+                "Install with: pip install macrobond-data-api"
+            )
+
+        logger.debug("get_metadata: symbol=%s", symbol)
+
+        try:
+            entity = mda.get_one_entity(symbol)
+            metadata = dict(entity.metadata)
+        except Exception as e:
+            logger.error("get_metadata_failed: symbol=%s, error=%s", symbol, str(e))
+            raise FetchError(f"Failed to get metadata for {symbol}: {e}") from e
+
+        logger.info("get_metadata_complete: symbol=%s", symbol)
+        return metadata

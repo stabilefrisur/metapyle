@@ -1,30 +1,24 @@
 """Macrobond source adapter using macrobond_data_api library."""
 
 import logging
+from collections.abc import Sequence
 from typing import Any
 
 import pandas as pd
 
 from metapyle.exceptions import FetchError, NoDataError
-from metapyle.sources.base import BaseSource, register_source
+from metapyle.sources.base import BaseSource, FetchRequest, register_source
 
 __all__ = ["MacrobondSource"]
 
 logger = logging.getLogger(__name__)
 
-# Lazy import of macrobond_data_api to avoid import-time errors
 _MDA_AVAILABLE: bool | None = None
 _mda_module: Any = None
 
 
 def _get_mda() -> Any:
-    """Lazy import of macrobond_data_api module.
-
-    Returns
-    -------
-    Any
-        The macrobond_data_api module, or None if not available.
-    """
+    """Lazy import of macrobond_data_api module."""
     global _MDA_AVAILABLE, _mda_module
 
     if _MDA_AVAILABLE is None:
@@ -44,147 +38,118 @@ def _get_mda() -> Any:
 class MacrobondSource(BaseSource):
     """Source adapter for Macrobond data via macrobond_data_api.
 
-    Uses macrobond_data_api for data retrieval. Automatically detects
-    whether to use ComClient (desktop app) or WebClient (API credentials).
-
-    Examples
-    --------
-    >>> source = MacrobondSource()
-    >>> df = source.fetch("usgdp", "2020-01-01", "2024-12-31")
+    Uses get_series for batch fetching of multiple series in a single call.
     """
 
     def fetch(
         self,
-        symbol: str,
+        requests: Sequence[FetchRequest],
         start: str,
         end: str,
-        *,
-        unified: bool = False,
-        **kwargs: Any,
     ) -> pd.DataFrame:
         """
         Fetch time-series data from Macrobond.
 
         Parameters
         ----------
-        symbol : str
-            Macrobond series name (e.g., "usgdp", "gbcpi").
+        requests : Sequence[FetchRequest]
+            One or more fetch requests. Field and path are ignored.
         start : str
             Start date in ISO format (YYYY-MM-DD).
         end : str
             End date in ISO format (YYYY-MM-DD).
-        unified : bool, optional
-            If True, use get_unified_series with kwargs pass-through.
-            If False (default), use get_one_series.
-        **kwargs : Any
-            Additional parameters passed to get_unified_series when unified=True.
-            E.g., frequency, currency, calendar_merge_mode.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with DatetimeIndex and single column named by symbol.
+            DataFrame with DatetimeIndex and columns named by symbol.
 
         Raises
         ------
         FetchError
-            If macrobond_data_api is not available or API call fails.
+            If macrobond_data_api not available or API call fails.
         NoDataError
-            If no data is returned for the symbol.
+            If no data returned or no data in date range.
         """
+        if not requests:
+            return pd.DataFrame()
+
         mda = _get_mda()
         if mda is None:
-            logger.error("fetch_failed: symbol=%s, reason=mda_not_installed", symbol)
+            logger.error("fetch_failed: reason=mda_not_installed")
             raise FetchError(
                 "macrobond_data_api package is not installed. "
                 "Install with: pip install macrobond-data-api"
             )
 
+        symbols = [req.symbol for req in requests]
+
         logger.debug(
-            "fetch_start: symbol=%s, start=%s, end=%s, unified=%s",
-            symbol,
+            "fetch_start: symbols=%s, start=%s, end=%s",
+            symbols,
             start,
             end,
-            unified,
         )
 
         try:
-            if unified:
-                df = self._fetch_unified(mda, symbol, **kwargs)
-            else:
-                df = self._fetch_raw(mda, symbol)
-        except (FetchError, NoDataError, NotImplementedError):
-            raise
+            series_list = mda.get_series(symbols)
         except Exception as e:
-            logger.error("fetch_failed: symbol=%s, error=%s", symbol, str(e))
-            raise FetchError(f"Macrobond API error for {symbol}: {e}") from e
+            logger.error("fetch_failed: symbols=%s, error=%s", symbols, str(e))
+            raise FetchError(f"Macrobond API error: {e}") from e
 
-        if df.empty:
-            logger.warning("fetch_empty: symbol=%s", symbol)
-            raise NoDataError(f"No data returned for {symbol}")
+        # Check for errors in any series
+        for series in series_list:
+            if series.is_error:
+                logger.error(
+                    "fetch_failed: symbol=%s, error=%s",
+                    series.primary_name,
+                    series.error_message,
+                )
+                raise FetchError(
+                    f"Macrobond error for {series.primary_name}: {series.error_message}"
+                )
+
+        # Convert each series to DataFrame and merge
+        dfs: list[pd.DataFrame] = []
+        for series in series_list:
+            df = series.values_to_pd_data_frame()
+            df.index = pd.to_datetime(df["date"])
+            df = df[["value"]].rename(columns={"value": series.primary_name})
+            dfs.append(df)
+
+        if not dfs:
+            logger.warning("fetch_empty: symbols=%s", symbols)
+            raise NoDataError(f"No data returned for {symbols}")
+
+        # Merge all series on index
+        result = dfs[0]
+        for df in dfs[1:]:
+            result = result.join(df, how="outer")
 
         # Filter by date range
         start_dt = pd.Timestamp(start)
         end_dt = pd.Timestamp(end)
-        mask = (df.index >= start_dt) & (df.index <= end_dt)
-        df_filtered = df.loc[mask]
+        mask = (result.index >= start_dt) & (result.index <= end_dt)
+        result = result.loc[mask]
 
-        if df_filtered.empty:
+        if result.empty:
             logger.warning(
-                "fetch_no_data_in_range: symbol=%s, start=%s, end=%s",
-                symbol,
+                "fetch_no_data_in_range: symbols=%s, start=%s, end=%s",
+                symbols,
                 start,
                 end,
             )
-            raise NoDataError(f"No data in date range {start} to {end} for {symbol}")
+            raise NoDataError(f"No data in date range {start} to {end}")
 
-        logger.info("fetch_complete: symbol=%s, rows=%d", symbol, len(df_filtered))
-        return df_filtered
-
-    def _fetch_raw(self, mda: Any, symbol: str) -> pd.DataFrame:
-        """Fetch using get_one_series."""
-        series = mda.get_one_series(symbol)
-        df = series.values_to_pd_data_frame()
-
-        # Convert to proper DataFrame structure
-        df.index = pd.to_datetime(df["date"])
-        df = df[["value"]].rename(columns={"value": symbol})
-        return df
-
-    def _fetch_unified(self, mda: Any, symbol: str, **kwargs: Any) -> pd.DataFrame:
-        """Fetch using get_unified_series with kwargs pass-through."""
-        result = mda.get_unified_series(symbol, **kwargs)
-        df = result.to_pd_data_frame()
-
-        # First column is typically date, rest are values
-        if len(df.columns) < 2:
-            # Malformed response - return empty DataFrame with proper structure
-            return pd.DataFrame(columns=[symbol])
-
-        df.index = pd.to_datetime(df.iloc[:, 0])
-        df = df.iloc[:, 1:2]
-        df.columns = [symbol]
-        return df
+        logger.info(
+            "fetch_complete: symbols=%s, rows=%d",
+            symbols,
+            len(result),
+        )
+        return result
 
     def get_metadata(self, symbol: str) -> dict[str, Any]:
-        """
-        Retrieve metadata for a Macrobond symbol.
-
-        Parameters
-        ----------
-        symbol : str
-            Macrobond series name.
-
-        Returns
-        -------
-        dict[str, Any]
-            Metadata dictionary containing series information.
-
-        Raises
-        ------
-        FetchError
-            If macrobond_data_api is not available or API call fails.
-        """
+        """Retrieve metadata for a Macrobond symbol."""
         mda = _get_mda()
         if mda is None:
             logger.error("get_metadata_failed: symbol=%s, reason=mda_not_installed", symbol)

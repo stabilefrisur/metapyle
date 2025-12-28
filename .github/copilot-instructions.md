@@ -289,44 +289,61 @@ logger.debug("value=%s", value)
 
 ## Project-Specific Patterns
 
-### Adapter Registration
+### Source Adapter Registration
+
+Use the `@register_source` decorator to add new data sources:
 
 ```python
-from metapyle.sources import register_source, BaseSource
+from metapyle.sources.base import BaseSource, register_source
 
 @register_source("custom")
 class CustomSource(BaseSource):
-    def fetch(self, symbol: str, start: str, end: str, **kwargs: Any) -> pd.DataFrame:
+    def fetch(
+        self,
+        symbol: str,
+        start: str,
+        end: str,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
+        """Return DataFrame with DatetimeIndex and single column."""
         ...
     
     def get_metadata(self, symbol: str) -> dict[str, Any]:
+        """Return metadata dict (description, unit, frequency, etc.)."""
         ...
 ```
 
 ### Exception Hierarchy
 
-```python
-class MetapyleError(Exception):
-    """Base exception for all metapyle errors."""
-
-class CatalogError(MetapyleError):
-    """Catalog-related errors."""
-
-class FetchError(MetapyleError):
-    """Data fetching errors."""
+```
+MetapyleError (base)
+├── CatalogError (catalog-related)
+│   ├── CatalogValidationError (malformed YAML, missing fields)
+│   ├── DuplicateNameError (same my_name twice)
+│   ├── UnknownSourceError (source not registered)
+│   └── SymbolNotFoundError (name not in catalog)
+└── FetchError (data retrieval)
+    └── NoDataError (adapter returned empty)
 ```
 
-### Cache Key Construction
+### Catalog Entry Structure
 
 ```python
-@dataclass(frozen=True, slots=True)
-class CacheKey:
-    source: str
-    symbol: str
-    field: str | None
-    start_date: str
-    end_date: str
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CatalogEntry:
+    my_name: str                    # required
+    source: str                     # required
+    symbol: str                     # required
+    field: str | None = None        # optional (e.g., Bloomberg field)
+    path: str | None = None         # optional (e.g., localfile path)
+    description: str | None = None  # optional
+    unit: str | None = None         # optional
 ```
+
+### Cache Key Components
+
+Cache lookups use: `(source, symbol, field, path, start_date, end_date)`.
+All are strings; `field` and `path` can be `None`.
 
 ---
 

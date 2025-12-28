@@ -19,36 +19,37 @@ Currently supports Bloomberg (via xbbg), Macrobond (via macrobond-data-api), and
 ## Installation
 
 ```bash
-uv add metapyle[bloomberg]
+uv add metapyle
 ```
 
 Or with pip:
 
 ```bash
-pip install metapyle[bloomberg]
+pip install metapyle
 ```
 
-For Macrobond support:
-
-```bash
-pip install metapyle[macrobond]
-```
-
-> **Note:** Bloomberg requires a Bloomberg Terminal. Macrobond requires desktop app or API credentials.
+> **Note:** Bloomberg requires a Bloomberg Terminal. Macrobond requires the desktop app or Web API credentials.
 
 ## Quick Start
 
 **1. Create a catalog file (`catalog.yaml`):**
 
 ```yaml
+# Bloomberg
 - my_name: sp500_close
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
 
-- my_name: gdp_us
+# Macrobond
+- my_name: us_gdp
+  source: macrobond
+  symbol: usnaac0169
+
+# Local file
+- my_name: gdp_forecast
   source: localfile
-  symbol: GDP_US          # column name in the file
+  symbol: GDP_FORECAST    # column name in the file
   path: /data/macro.csv   # file path
 ```
 
@@ -59,7 +60,7 @@ from metapyle import Client
 
 with Client(catalog="catalog.yaml") as client:
     # end defaults to today
-    df = client.get(["sp500_close"], start="2024-01-01")
+    df = client.get(["sp500_close", "us_gdp"], start="2024-01-01")
 ```
 
 ## Documentation

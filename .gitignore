@@ -5,10 +5,12 @@ build/
 dist/
 wheels/
 *.egg-info
-TODO.md
 
 # Virtual environments
 .venv
+
+# Environment variables (may contain secrets)
+.env
 
 # Metapyle cache
 cache/
@@ -30,9 +32,9 @@ dmypy.json
 # Ruff
 .ruff_cache/
 
-# GitHub directory (except copilot instructions)
-.github/*
-!.github/copilot-instructions.md
+# Local files
+TODO.md
 
-# Git worktrees
-.worktrees/
+# GitHub Copilot (local development aids)
+.github/skills/
+.github/agents/

@@ -78,37 +78,14 @@ Now your analysis code uses `sp500_close` everywhere. If the underlying source c
 ### Requirements
 
 - Python 3.12 or higher
-- pandas >= 2.0.0
+- Bloomberg Terminal running on your machine, OR access to Bloomberg Server API (B-PIPE)
+- Macrobond desktop application installed (uses COM interface), OR Macrobond Web API credentials configured
 
-### Basic Installation
+### Installation
 
 ```bash
 pip install metapyle
 ```
-
-### With Bloomberg Support
-
-If you need Bloomberg data access, install with the `bloomberg` extra:
-
-```bash
-pip install metapyle[bloomberg]
-```
-
-This installs the `xbbg` package. You'll also need:
-- Bloomberg Terminal running on your machine, OR
-- Access to a Bloomberg Server API (B-PIPE)
-
-### With Macrobond Support
-
-For Macrobond data access:
-
-```bash
-pip install metapyle[macrobond]
-```
-
-This installs the `macrobond-data-api` package. You'll also need:
-- Macrobond desktop application installed (uses COM interface), OR
-- Macrobond Web API credentials configured
 
 ### Verify Installation
 

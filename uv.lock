@@ -470,14 +470,13 @@ name = "metapyle"
 version = "0.1.1"
 source = { editable = "." }
 dependencies = [
+    { name = "macrobond-data-api" },
     { name = "pandas" },
     { name = "pyyaml" },
-]
-
-[package.optional-dependencies]
-bloomberg = [
     { name = "xbbg" },
 ]
+
+[package.dev-dependencies]
 dev = [
     { name = "mypy" },
     { name = "pytest" },
@@ -485,23 +484,23 @@ dev = [
     { name = "pytest-mock" },
     { name = "ruff" },
 ]
-macrobond = [
-    { name = "macrobond-data-api" },
-]
 
 [package.metadata]
 requires-dist = [
-    { name = "macrobond-data-api", marker = "extra == 'macrobond'", specifier = ">=0.1.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.19.1" },
+    { name = "macrobond-data-api", specifier = ">=3.0.4" },
     { name = "pandas", specifier = ">=2.0.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
-    { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.15.1" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.14.10" },
-    { name = "xbbg", marker = "extra == 'bloomberg'", specifier = ">=0.6.0" },
+    { name = "xbbg", specifier = ">=0.10.0" },
 ]
-provides-extras = ["bloomberg", "macrobond", "dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.19.1" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "pytest-mock", specifier = ">=3.15.1" },
+    { name = "ruff", specifier = ">=0.14.10" },
+]
 
 [[package]]
 name = "more-itertools"

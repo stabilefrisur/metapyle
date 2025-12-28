@@ -519,3 +519,78 @@ valid_entry,,
     assert "symbol" in error_message
     # Should NOT have a duplicate error - row should be skipped before that check
     assert "Duplicate" not in error_message
+
+
+def test_catalog_from_csv_missing_required_field_reports_all_errors(tmp_path: Path) -> None:
+    """from_csv() reports all validation errors at once."""
+    csv_content = """my_name,source,symbol
+entry1,,TEST Index
+entry2,bloomberg,
+,localfile,DATA
+"""
+    csv_file = tmp_path / "catalog.csv"
+    csv_file.write_text(csv_content)
+
+    with pytest.raises(CatalogValidationError) as exc_info:
+        Catalog.from_csv(csv_file)
+
+    error_msg = str(exc_info.value)
+    assert "Row 2" in error_msg  # missing source
+    assert "Row 3" in error_msg  # missing symbol
+    assert "Row 4" in error_msg  # missing my_name
+
+
+def test_catalog_from_csv_duplicate_within_file(tmp_path: Path) -> None:
+    """from_csv() detects duplicate my_name within same file."""
+    csv_content = """my_name,source,symbol
+duplicate,bloomberg,TEST1
+other,bloomberg,TEST2
+duplicate,localfile,TEST3
+"""
+    csv_file = tmp_path / "catalog.csv"
+    csv_file.write_text(csv_content)
+
+    with pytest.raises(CatalogValidationError) as exc_info:
+        Catalog.from_csv(csv_file)
+
+    error_msg = str(exc_info.value)
+    assert "duplicate" in error_msg.lower()
+    assert "Row 4" in error_msg
+
+
+def test_catalog_from_csv_whitespace_trimmed(tmp_path: Path) -> None:
+    """from_csv() trims whitespace from all values."""
+    csv_content = """my_name,source,symbol,description
+  spaced_entry  ,  bloomberg  ,  SPX Index  ,  Has spaces  
+"""
+    csv_file = tmp_path / "catalog.csv"
+    csv_file.write_text(csv_content)
+
+    catalog = Catalog.from_csv(csv_file)
+    entry = catalog.get("spaced_entry")
+
+    assert entry.my_name == "spaced_entry"
+    assert entry.source == "bloomberg"
+    assert entry.symbol == "SPX Index"
+    assert entry.description == "Has spaces"
+
+
+def test_catalog_from_csv_extra_columns_ignored(tmp_path: Path) -> None:
+    """from_csv() ignores extra columns in CSV."""
+    csv_content = """my_name,source,symbol,notes,internal_id
+test_entry,bloomberg,TEST Index,some note,12345
+"""
+    csv_file = tmp_path / "catalog.csv"
+    csv_file.write_text(csv_content)
+
+    catalog = Catalog.from_csv(csv_file)
+
+    assert len(catalog) == 1
+    entry = catalog.get("test_entry")
+    assert entry.source == "bloomberg"
+
+
+def test_catalog_from_csv_file_not_found() -> None:
+    """from_csv() raises CatalogValidationError for missing file."""
+    with pytest.raises(CatalogValidationError, match="not found"):
+        Catalog.from_csv("/nonexistent/path/catalog.csv")

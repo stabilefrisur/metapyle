@@ -1,0 +1,17 @@
+- my_name: sp500_mb
+  source: macrobond
+  symbol: ih:bl:spx index
+  description: S&P 500 Index
+  unit: points
+
+- my_name: us_gdp_mb
+  source: macrobond
+  symbol: usnaac0169
+  description: US GDP constant prices SA AR
+  unit: USD trillions
+
+- my_name: cmbs_bbb
+  source: macrobond
+  symbol: ih:mb:priv:xsa_spread_cmbs_bbb
+  description: CMBS BBB spread
+  unit: basis points

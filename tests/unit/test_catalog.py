@@ -594,3 +594,61 @@ def test_catalog_from_csv_file_not_found() -> None:
     """from_csv() raises CatalogValidationError for missing file."""
     with pytest.raises(CatalogValidationError, match="not found"):
         Catalog.from_csv("/nonexistent/path/catalog.csv")
+
+
+def test_catalog_from_csv_multiple_files(tmp_path: Path) -> None:
+    """from_csv() loads and merges multiple CSV files."""
+    csv1 = """my_name,source,symbol
+entry1,bloomberg,TEST1
+"""
+    csv2 = """my_name,source,symbol
+entry2,localfile,TEST2
+"""
+    file1 = tmp_path / "catalog1.csv"
+    file2 = tmp_path / "catalog2.csv"
+    file1.write_text(csv1)
+    file2.write_text(csv2)
+
+    catalog = Catalog.from_csv([file1, file2])
+
+    assert len(catalog) == 2
+    assert "entry1" in catalog
+    assert "entry2" in catalog
+
+
+def test_catalog_from_csv_duplicate_across_files(tmp_path: Path) -> None:
+    """from_csv() detects duplicate my_name across files."""
+    csv1 = """my_name,source,symbol
+duplicate,bloomberg,TEST1
+"""
+    csv2 = """my_name,source,symbol
+duplicate,localfile,TEST2
+"""
+    file1 = tmp_path / "catalog1.csv"
+    file2 = tmp_path / "catalog2.csv"
+    file1.write_text(csv1)
+    file2.write_text(csv2)
+
+    with pytest.raises(CatalogValidationError) as exc_info:
+        Catalog.from_csv([file1, file2])
+
+    error_msg = str(exc_info.value)
+    assert "duplicate" in error_msg.lower()
+
+
+def test_catalog_from_csv_mixed_path_types(tmp_path: Path) -> None:
+    """from_csv() accepts mixed str and Path in list."""
+    csv1 = """my_name,source,symbol
+entry1,bloomberg,TEST1
+"""
+    csv2 = """my_name,source,symbol
+entry2,localfile,TEST2
+"""
+    file1 = tmp_path / "catalog1.csv"
+    file2 = tmp_path / "catalog2.csv"
+    file1.write_text(csv1)
+    file2.write_text(csv2)
+
+    catalog = Catalog.from_csv([file1, str(file2)])
+
+    assert len(catalog) == 2

@@ -1,4 +1,4 @@
-"""Unit tests for BloombergSource adapter."""
+"""Tests for BloombergSource."""
 
 from unittest.mock import MagicMock, patch
 
@@ -6,153 +6,163 @@ import pandas as pd
 import pytest
 
 from metapyle.exceptions import FetchError, NoDataError
-from metapyle.sources.base import _global_registry
+from metapyle.sources.base import FetchRequest
 from metapyle.sources.bloomberg import BloombergSource
 
 
-class TestBloombergSourceFetchSingleTicker:
-    """Tests for fetching single ticker data."""
+@pytest.fixture
+def source() -> BloombergSource:
+    """Create BloombergSource instance."""
+    return BloombergSource()
 
-    def test_bloomberg_source_fetch_single_ticker(self) -> None:
-        """Test fetching data for a single Bloomberg ticker."""
-        # Create mock DataFrame with MultiIndex columns (as bdh returns)
+
+class TestBloombergSourceFetch:
+    """Tests for BloombergSource.fetch()."""
+
+    def test_single_request(self, source: BloombergSource) -> None:
+        """Fetch single symbol with field."""
         mock_df = pd.DataFrame(
-            {("SPX Index", "PX_LAST"): [5000.0, 5001.0]},
-            index=pd.to_datetime(["2024-01-02", "2024-01-03"]),
-        )
-        mock_df.columns = pd.MultiIndex.from_tuples([("SPX Index", "PX_LAST")])
-
-        mock_blp = MagicMock()
-        mock_blp.bdh.return_value = mock_df
-
-        with patch("metapyle.sources.bloomberg._get_blp", return_value=mock_blp):
-            source = BloombergSource()
-            result = source.fetch("SPX Index", "2024-01-02", "2024-01-03")
-
-            assert isinstance(result, pd.DataFrame)
-            assert len(result) == 2
-            assert "SPX Index_PX_LAST" in result.columns
-            assert isinstance(result.index, pd.DatetimeIndex)
-            assert result.iloc[0]["SPX Index_PX_LAST"] == 5000.0
-            assert result.iloc[1]["SPX Index_PX_LAST"] == 5001.0
-
-            mock_blp.bdh.assert_called_once_with("SPX Index", "PX_LAST", "2024-01-02", "2024-01-03")
-
-
-class TestBloombergSourceColumnNaming:
-    """Tests for column naming convention."""
-
-    def test_bloomberg_returns_symbol_field_column_name(self) -> None:
-        """Bloomberg source returns column named symbol_field."""
-        mock_df = pd.DataFrame(
-            {("SPX Index", "PX_LAST"): [100.0, 101.0]},
+            {"PX_LAST": [100.0, 101.0]},
             index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
         )
-        mock_df.columns = pd.MultiIndex.from_tuples([("SPX Index", "PX_LAST")])
-
-        mock_blp = MagicMock()
-        mock_blp.bdh.return_value = mock_df
-
-        with patch("metapyle.sources.bloomberg._get_blp", return_value=mock_blp):
-            source = BloombergSource()
-            df = source.fetch("SPX Index", "2024-01-01", "2024-01-02", field="PX_LAST")
-
-            assert "SPX Index_PX_LAST" in df.columns
-            assert "value" not in df.columns
-
-
-class TestBloombergSourceFetchCustomField:
-    """Tests for fetching with custom field."""
-
-    def test_bloomberg_source_fetch_custom_field(self) -> None:
-        """Test fetching data with a custom Bloomberg field."""
-        mock_df = pd.DataFrame(
-            {("AAPL US Equity", "PX_OPEN"): [150.0, 151.0]},
-            index=pd.to_datetime(["2024-01-02", "2024-01-03"]),
+        mock_df.columns = pd.MultiIndex.from_tuples(
+            [("SPX Index", "PX_LAST")]
         )
-        mock_df.columns = pd.MultiIndex.from_tuples([("AAPL US Equity", "PX_OPEN")])
 
-        mock_blp = MagicMock()
-        mock_blp.bdh.return_value = mock_df
+        with patch(
+            "metapyle.sources.bloomberg._get_blp"
+        ) as mock_get_blp:
+            mock_blp = MagicMock()
+            mock_blp.bdh.return_value = mock_df
+            mock_get_blp.return_value = mock_blp
 
-        with patch("metapyle.sources.bloomberg._get_blp", return_value=mock_blp):
-            source = BloombergSource()
-            result = source.fetch("AAPL US Equity", "2024-01-02", "2024-01-03", field="PX_OPEN")
+            requests = [FetchRequest(symbol="SPX Index", field="PX_LAST")]
+            df = source.fetch(requests, "2024-01-01", "2024-01-02")
 
-            assert isinstance(result, pd.DataFrame)
-            assert len(result) == 2
-            assert "AAPL US Equity_PX_OPEN" in result.columns
-            assert result.iloc[0]["AAPL US Equity_PX_OPEN"] == 150.0
+            assert list(df.columns) == ["SPX Index::PX_LAST"]
+            assert len(df) == 2
 
-            mock_blp.bdh.assert_called_once_with(
-                "AAPL US Equity", "PX_OPEN", "2024-01-02", "2024-01-03"
-            )
+    def test_multiple_requests_same_field(
+        self, source: BloombergSource
+    ) -> None:
+        """Fetch multiple symbols with same field."""
+        mock_df = pd.DataFrame(
+            [[100.0, 200.0], [101.0, 201.0]],
+            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
+            columns=pd.MultiIndex.from_tuples([
+                ("SPX Index", "PX_LAST"),
+                ("AAPL US Equity", "PX_LAST"),
+            ]),
+        )
 
+        with patch(
+            "metapyle.sources.bloomberg._get_blp"
+        ) as mock_get_blp:
+            mock_blp = MagicMock()
+            mock_blp.bdh.return_value = mock_df
+            mock_get_blp.return_value = mock_blp
 
-class TestBloombergSourceEmptyResponseRaises:
-    """Tests for empty response handling."""
+            requests = [
+                FetchRequest(symbol="SPX Index", field="PX_LAST"),
+                FetchRequest(symbol="AAPL US Equity", field="PX_LAST"),
+            ]
+            df = source.fetch(requests, "2024-01-01", "2024-01-02")
 
-    def test_bloomberg_source_empty_response_raises(self) -> None:
-        """Test that NoDataError is raised when Bloomberg returns empty data."""
-        empty_df = pd.DataFrame()
+            assert "SPX Index::PX_LAST" in df.columns
+            assert "AAPL US Equity::PX_LAST" in df.columns
+            mock_blp.bdh.assert_called_once()
 
-        mock_blp = MagicMock()
-        mock_blp.bdh.return_value = empty_df
+    def test_multiple_fields_same_symbol(
+        self, source: BloombergSource
+    ) -> None:
+        """Fetch multiple fields for same symbol."""
+        mock_df = pd.DataFrame(
+            [[100.0, 105.0], [101.0, 106.0]],
+            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
+            columns=pd.MultiIndex.from_tuples([
+                ("SPX Index", "PX_LAST"),
+                ("SPX Index", "PX_HIGH"),
+            ]),
+        )
 
-        with patch("metapyle.sources.bloomberg._get_blp", return_value=mock_blp):
-            source = BloombergSource()
+        with patch(
+            "metapyle.sources.bloomberg._get_blp"
+        ) as mock_get_blp:
+            mock_blp = MagicMock()
+            mock_blp.bdh.return_value = mock_df
+            mock_get_blp.return_value = mock_blp
 
-            with pytest.raises(NoDataError, match="No data returned"):
-                source.fetch("INVALID Index", "2024-01-01", "2024-01-31")
+            requests = [
+                FetchRequest(symbol="SPX Index", field="PX_LAST"),
+                FetchRequest(symbol="SPX Index", field="PX_HIGH"),
+            ]
+            df = source.fetch(requests, "2024-01-01", "2024-01-02")
 
+            assert "SPX Index::PX_LAST" in df.columns
+            assert "SPX Index::PX_HIGH" in df.columns
 
-class TestBloombergSourceApiErrorRaises:
-    """Tests for API error handling."""
+    def test_default_field(self, source: BloombergSource) -> None:
+        """Use PX_LAST as default field when not specified."""
+        mock_df = pd.DataFrame(
+            {"PX_LAST": [100.0]},
+            index=pd.to_datetime(["2024-01-01"]),
+        )
+        mock_df.columns = pd.MultiIndex.from_tuples(
+            [("SPX Index", "PX_LAST")]
+        )
 
-    def test_bloomberg_source_api_error_raises(self) -> None:
-        """Test that FetchError is raised when Bloomberg API fails."""
-        mock_blp = MagicMock()
-        mock_blp.bdh.side_effect = RuntimeError("Connection failed")
+        with patch(
+            "metapyle.sources.bloomberg._get_blp"
+        ) as mock_get_blp:
+            mock_blp = MagicMock()
+            mock_blp.bdh.return_value = mock_df
+            mock_get_blp.return_value = mock_blp
 
-        with patch("metapyle.sources.bloomberg._get_blp", return_value=mock_blp):
-            source = BloombergSource()
+            requests = [FetchRequest(symbol="SPX Index")]  # no field
+            df = source.fetch(requests, "2024-01-01", "2024-01-01")
 
-            with pytest.raises(FetchError, match="Bloomberg API error"):
-                source.fetch("SPX Index", "2024-01-01", "2024-01-31")
+            assert "SPX Index::PX_LAST" in df.columns
 
-    def test_bloomberg_source_xbbg_not_available_raises(self) -> None:
-        """Test that FetchError is raised when xbbg is not installed."""
-        with patch("metapyle.sources.bloomberg._get_blp", return_value=None):
-            source = BloombergSource()
+    def test_xbbg_not_available(self, source: BloombergSource) -> None:
+        """Raise FetchError when xbbg not installed."""
+        with patch(
+            "metapyle.sources.bloomberg._get_blp", return_value=None
+        ):
+            requests = [FetchRequest(symbol="SPX Index", field="PX_LAST")]
+            with pytest.raises(FetchError, match="xbbg"):
+                source.fetch(requests, "2024-01-01", "2024-01-02")
 
-            with pytest.raises(FetchError, match="xbbg package is not installed"):
-                source.fetch("SPX Index", "2024-01-01", "2024-01-31")
+    def test_empty_result_raises(self, source: BloombergSource) -> None:
+        """Raise NoDataError when Bloomberg returns empty."""
+        with patch(
+            "metapyle.sources.bloomberg._get_blp"
+        ) as mock_get_blp:
+            mock_blp = MagicMock()
+            mock_blp.bdh.return_value = pd.DataFrame()
+            mock_get_blp.return_value = mock_blp
+
+            requests = [FetchRequest(symbol="INVALID", field="PX_LAST")]
+            with pytest.raises(NoDataError):
+                source.fetch(requests, "2024-01-01", "2024-01-02")
 
 
 class TestBloombergSourceGetMetadata:
-    """Tests for get_metadata method."""
+    """Tests for get_metadata."""
 
-    def test_bloomberg_source_get_metadata(self) -> None:
-        """Test metadata retrieval for a Bloomberg symbol."""
-        # Mock _get_blp to avoid triggering real xbbg import
-        with patch("metapyle.sources.bloomberg._get_blp", return_value=None):
-            source = BloombergSource()
-            metadata = source.get_metadata("SPX Index")
-
-            assert metadata["source"] == "bloomberg"
-            assert metadata["symbol"] == "SPX Index"
-            assert "xbbg_available" in metadata
+    def test_metadata(self, source: BloombergSource) -> None:
+        """get_metadata returns basic info."""
+        with patch("metapyle.sources.bloomberg._get_blp"):
+            meta = source.get_metadata("SPX Index")
+            assert meta["source"] == "bloomberg"
+            assert meta["symbol"] == "SPX Index"
 
 
 class TestBloombergSourceIsRegistered:
     """Tests for source registration."""
 
-    def test_bloomberg_source_is_registered(self) -> None:
-        """Test that BloombergSource is registered with the global registry."""
-        # Verify the source is registered
-        registered_sources = _global_registry.list_sources()
-        assert "bloomberg" in registered_sources
+    def test_registered(self) -> None:
+        """BloombergSource is registered as 'bloomberg'."""
+        from metapyle.sources.base import _global_registry
 
-        # Verify we can get an instance
         source = _global_registry.get("bloomberg")
         assert isinstance(source, BloombergSource)

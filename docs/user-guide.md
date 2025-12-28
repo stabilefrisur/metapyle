@@ -322,7 +322,7 @@ df = client.get(["sp500_close"], start="01/01/2024", end="12/31/2024")
 Use `get_raw()` for one-off queries that bypass the catalog—useful for exploring new data or quick tests:
 
 ```python
-# Bloomberg: returns column named 'symbol_field'
+# Bloomberg: returns column named 'symbol::field'
 # end is optional - defaults to today
 df = client.get_raw(
     source="bloomberg",
@@ -331,9 +331,9 @@ df = client.get_raw(
     start="2024-01-01"
 )
 print(df.head())
-#             AAPL US Equity_PX_LAST
-# 2024-01-02                   185.64
-# 2024-01-03                   184.25
+#             AAPL US Equity::PX_LAST
+# 2024-01-02                    185.64
+# 2024-01-03                    184.25
 
 # LocalFile: returns column with original name from file
 df = client.get_raw(
@@ -349,10 +349,11 @@ print(df.head())
 # 2024-01-03  27956.0
 ```
 
-`get_raw()` returns a DataFrame with the source's original column name:
+`get_raw()` returns a DataFrame with the source's column naming convention:
 
-- **Bloomberg**: `symbol_field` (e.g., `AAPL US Equity_PX_LAST`)
+- **Bloomberg**: `symbol::field` (e.g., `AAPL US Equity::PX_LAST`)
 - **LocalFile**: column name as-is from the file (e.g., `GDP_US`)
+- **Macrobond**: symbol name as-is (e.g., `usgdp`)
 
 ### Inspecting Metadata
 

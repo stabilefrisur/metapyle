@@ -294,23 +294,52 @@ logger.debug("value=%s", value)
 Use the `@register_source` decorator to add new data sources:
 
 ```python
-from metapyle.sources.base import BaseSource, register_source
+from collections.abc import Sequence
+from metapyle.sources.base import BaseSource, FetchRequest, make_column_name, register_source
 
 @register_source("custom")
 class CustomSource(BaseSource):
     def fetch(
         self,
-        symbol: str,
+        requests: Sequence[FetchRequest],
         start: str,
         end: str,
-        **kwargs: Any,
     ) -> pd.DataFrame:
-        """Return DataFrame with DatetimeIndex and single column."""
-        ...
+        """
+        Fetch data for one or more requests.
+        
+        Returns DataFrame with DatetimeIndex and columns named using
+        make_column_name(request.symbol, request.field).
+        """
+        # Example: batch fetch all symbols in one API call
+        symbols = [req.symbol for req in requests]
+        data = api.fetch_batch(symbols, start, end)
+        
+        # Rename columns using make_column_name
+        result = pd.DataFrame()
+        for req in requests:
+            col_name = make_column_name(req.symbol, req.field)
+            result[col_name] = data[req.symbol]
+        return result
     
     def get_metadata(self, symbol: str) -> dict[str, Any]:
         """Return metadata dict (description, unit, frequency, etc.)."""
         ...
+```
+
+**FetchRequest** dataclass bundles request parameters:
+```python
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FetchRequest:
+    symbol: str              # required
+    field: str | None = None # optional (e.g., Bloomberg field)
+    path: str | None = None  # optional (e.g., localfile path)
+```
+
+**make_column_name()** ensures consistent naming:
+```python
+make_column_name("SPX Index", "PX_LAST")  # → "SPX Index::PX_LAST"
+make_column_name("usgdp", None)           # → "usgdp"
 ```
 
 ### Exception Hierarchy
@@ -342,8 +371,16 @@ class CatalogEntry:
 
 ### Cache Key Components
 
-Cache lookups use: `(source, symbol, field, path, start_date, end_date)`.
+Cache stores data **per-symbol** (not per-batch). Each cache entry uses:
+`(source, symbol, field, path, start_date, end_date)`.
+
 All are strings; `field` and `path` can be `None`.
+
+**Batch fetch behavior**: When fetching multiple symbols from the same source, metapyle:
+1. Checks cache for each symbol individually
+2. Groups uncached symbols by source
+3. Batch fetches per source (single API call)
+4. Splits result and caches each symbol separately
 
 ---
 

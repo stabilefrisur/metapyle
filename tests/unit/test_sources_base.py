@@ -6,8 +6,10 @@ import pytest
 from metapyle.exceptions import UnknownSourceError
 from metapyle.sources.base import (
     BaseSource,
+    FetchRequest,
     SourceRegistry,
     _global_registry,
+    make_column_name,
     register_source,
 )
 
@@ -135,3 +137,41 @@ def test_source_registry_caches_instances() -> None:
     source1 = registry.get("test")
     source2 = registry.get("test")
     assert source1 is source2
+
+
+class TestMakeColumnName:
+    """Tests for make_column_name utility."""
+
+    def test_symbol_only(self) -> None:
+        """Column name is symbol when no field."""
+        result = make_column_name("usgdp", None)
+        assert result == "usgdp"
+
+    def test_symbol_with_field(self) -> None:
+        """Column name is symbol::field when field present."""
+        result = make_column_name("SPX Index", "PX_LAST")
+        assert result == "SPX Index::PX_LAST"
+
+
+class TestFetchRequest:
+    """Tests for FetchRequest dataclass."""
+
+    def test_symbol_only(self) -> None:
+        """FetchRequest with only symbol."""
+        req = FetchRequest(symbol="usgdp")
+        assert req.symbol == "usgdp"
+        assert req.field is None
+        assert req.path is None
+
+    def test_all_fields(self) -> None:
+        """FetchRequest with all fields."""
+        req = FetchRequest(symbol="GDP", field="value", path="/data/file.csv")
+        assert req.symbol == "GDP"
+        assert req.field == "value"
+        assert req.path == "/data/file.csv"
+
+    def test_frozen(self) -> None:
+        """FetchRequest is immutable."""
+        req = FetchRequest(symbol="test")
+        with pytest.raises(AttributeError):
+            req.symbol = "changed"  # type: ignore[misc]

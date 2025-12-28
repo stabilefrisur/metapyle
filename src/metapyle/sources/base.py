@@ -2,11 +2,53 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 import pandas as pd
 
 from metapyle.exceptions import UnknownSourceError
+
+__all__ = ["BaseSource", "FetchRequest", "make_column_name", "register_source"]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FetchRequest:
+    """
+    Single request within a batch fetch.
+
+    Parameters
+    ----------
+    symbol : str
+        Source-specific identifier.
+    field : str | None
+        Source-specific field name (e.g., "PX_LAST" for Bloomberg).
+    path : str | None
+        File path for localfile source.
+    """
+
+    symbol: str
+    field: str | None = None
+    path: str | None = None
+
+
+def make_column_name(symbol: str, field: str | None) -> str:
+    """
+    Generate consistent column name for source output.
+
+    Parameters
+    ----------
+    symbol : str
+        The symbol identifier.
+    field : str | None
+        Optional field name.
+
+    Returns
+    -------
+    str
+        "symbol::field" if field present, otherwise "symbol".
+    """
+    return f"{symbol}::{field}" if field else symbol
 
 
 class BaseSource(ABC):

@@ -95,6 +95,46 @@ from metapyle import Client
 print("metapyle installed successfully")
 ```
 
+### Running Integration Tests
+
+After installing metapyle, run integration tests to verify your data source connections work correctly.
+
+**All integration tests** (requires both Bloomberg and Macrobond):
+
+```bash
+pytest -m integration
+```
+
+**Single source only:**
+
+```bash
+# Bloomberg only
+pytest -m bloomberg
+
+# Macrobond only
+pytest -m macrobond
+```
+
+**What's tested:**
+
+- Single and batch fetches from each source
+- Frequency alignment (client-side)
+- Caching behavior
+- Metadata retrieval
+- Cross-source queries
+
+**Testing private/in-house series:**
+
+Some tests use private Macrobond series and are skipped by default. To include them:
+
+```bash
+pytest -m integration --run-private
+```
+
+To add your own private series tests:
+1. Add entries to `tests/integration/fixtures/macrobond.yaml`
+2. Create tests marked with `@pytest.mark.private`
+
 ---
 
 ## Quick Start

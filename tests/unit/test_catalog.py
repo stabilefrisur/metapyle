@@ -560,9 +560,11 @@ duplicate,localfile,TEST3
 
 def test_catalog_from_csv_whitespace_trimmed(tmp_path: Path) -> None:
     """from_csv() trims whitespace from all values."""
-    csv_content = """my_name,source,symbol,description
-  spaced_entry  ,  bloomberg  ,  SPX Index  ,  Has spaces  
-"""
+    # Note: spaces around values test trimming; no trailing whitespace in source
+    csv_content = (
+        "my_name,source,symbol,description\n"
+        "  spaced_entry  ,  bloomberg  ,  SPX Index  ,  Has spaces  \n"
+    )
     csv_file = tmp_path / "catalog.csv"
     csv_file.write_text(csv_content)
 
@@ -837,3 +839,105 @@ def test_catalog_to_yaml_roundtrip(tmp_path: Path) -> None:
     assert reloaded_entry.field == entry.field
     assert reloaded_entry.description == entry.description
     assert reloaded_entry.unit == entry.unit
+
+
+# ============================================================================
+# Full Roundtrip Tests
+# ============================================================================
+
+
+def test_catalog_csv_to_yaml_roundtrip(tmp_path: Path) -> None:
+    """Catalog loaded from CSV, exported to YAML, reloaded from YAML matches original."""
+    # Create CSV with comprehensive test data:
+    # - Entry with all fields populated (bloomberg)
+    # - Entry with optional fields as None (localfile)
+    # - Entry from different source (macrobond)
+    csv_content = """my_name,source,symbol,field,path,description,unit
+sp500_close,bloomberg,SPX Index,PX_LAST,,S&P 500 closing price,points
+gdp_us,localfile,GDP_US,,/data/macro.csv,,
+uscpi,macrobond,uscpi,,,US Consumer Price Index,percent
+minimal,bloomberg,TEST Index,,,,
+"""
+    csv_file = tmp_path / "original.csv"
+    csv_file.write_text(csv_content)
+
+    # Load from CSV
+    original = Catalog.from_csv(csv_file)
+
+    # Export to YAML
+    yaml_file = tmp_path / "exported.yaml"
+    original.to_yaml(yaml_file)
+
+    # Reload from YAML
+    reloaded = Catalog.from_yaml(yaml_file)
+
+    # Assert all entries match
+    assert len(reloaded) == len(original)
+    for name in original.list_names():
+        orig_entry = original.get(name)
+        reload_entry = reloaded.get(name)
+
+        assert reload_entry.my_name == orig_entry.my_name
+        assert reload_entry.source == orig_entry.source
+        assert reload_entry.symbol == orig_entry.symbol
+        assert reload_entry.field == orig_entry.field
+        assert reload_entry.path == orig_entry.path
+        assert reload_entry.description == orig_entry.description
+        assert reload_entry.unit == orig_entry.unit
+
+
+def test_catalog_yaml_to_csv_roundtrip(tmp_path: Path) -> None:
+    """Catalog loaded from YAML, exported to CSV, reloaded from CSV matches original."""
+    # Create YAML with comprehensive test data:
+    # - Entry with all fields populated (bloomberg)
+    # - Entry with optional fields as None (localfile)
+    # - Entry from different source (macrobond)
+    yaml_content = """
+- my_name: sp500_close
+  source: bloomberg
+  symbol: SPX Index
+  field: PX_LAST
+  description: S&P 500 closing price
+  unit: points
+
+- my_name: gdp_us
+  source: localfile
+  symbol: GDP_US
+  path: /data/macro.csv
+
+- my_name: uscpi
+  source: macrobond
+  symbol: uscpi
+  description: US Consumer Price Index
+  unit: percent
+
+- my_name: minimal
+  source: bloomberg
+  symbol: TEST Index
+"""
+    yaml_file = tmp_path / "original.yaml"
+    yaml_file.write_text(yaml_content)
+
+    # Load from YAML
+    original = Catalog.from_yaml(yaml_file)
+
+    # Export to CSV
+    csv_file = tmp_path / "exported.csv"
+    original.to_csv(csv_file)
+
+    # Reload from CSV
+    reloaded = Catalog.from_csv(csv_file)
+
+    # Assert all entries match
+    assert len(reloaded) == len(original)
+    for name in original.list_names():
+        orig_entry = original.get(name)
+        reload_entry = reloaded.get(name)
+
+        assert reload_entry.my_name == orig_entry.my_name
+        assert reload_entry.source == orig_entry.source
+        assert reload_entry.symbol == orig_entry.symbol
+        assert reload_entry.field == orig_entry.field
+        assert reload_entry.path == orig_entry.path
+        assert reload_entry.description == orig_entry.description
+        assert reload_entry.unit == orig_entry.unit

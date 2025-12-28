@@ -3,6 +3,7 @@
 import datetime
 import logging
 from itertools import groupby
+from pathlib import Path
 from typing import Any, Self
 
 import pandas as pd
@@ -25,7 +26,7 @@ class Client:
 
     Parameters
     ----------
-    catalog : str | list[str]
+    catalog : str | Path | list[str | Path]
         Path or list of paths to YAML catalog files.
     cache_path : str | None, optional
         Path to SQLite cache database. If None, uses default path.
@@ -40,7 +41,7 @@ class Client:
 
     def __init__(
         self,
-        catalog: str | list[str],
+        catalog: str | Path | list[str | Path],
         *,
         cache_path: str | None = None,
         cache_enabled: bool = True,

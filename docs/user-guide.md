@@ -10,12 +10,13 @@
 2. [Installation](#installation)
 3. [Quick Start](#quick-start)
 4. [Catalog Configuration](#catalog-configuration)
-5. [Querying Data](#querying-data)
-6. [Frequency Alignment](#frequency-alignment)
-7. [Caching](#caching)
-8. [Data Sources](#data-sources)
-9. [Error Handling](#error-handling)
-10. [Architecture Overview](#architecture-overview)
+5. [Creating Catalogs from CSV](#creating-catalogs-from-csv)
+6. [Querying Data](#querying-data)
+7. [Frequency Alignment](#frequency-alignment)
+8. [Caching](#caching)
+9. [Data Sources](#data-sources)
+10. [Error Handling](#error-handling)
+11. [Architecture Overview](#architecture-overview)
 
 ---
 
@@ -260,6 +261,95 @@ Metapyle validates your catalog on load:
 - **Unknown source** → `UnknownSourceError`
 
 If validation fails, you'll get a clear error message pointing to the problem.
+
+---
+
+## Creating Catalogs from CSV
+
+For bulk catalog creation, you can work in spreadsheets (Excel, Google Sheets) and convert to YAML.
+
+### Generating a Template
+
+Generate a blank CSV template:
+
+```python
+from metapyle.catalog import Catalog
+
+# All columns
+template = Catalog.csv_template()
+print(template)
+# my_name,source,symbol,field,path,description,unit
+
+# Write to file
+Catalog.csv_template(path="catalog_template.csv")
+```
+
+Generate a source-specific template with example row:
+
+```python
+# Bloomberg-specific (includes field column, excludes path)
+Catalog.csv_template(source="bloomberg", path="bloomberg_template.csv")
+# my_name,source,symbol,field,description,unit
+# example_name,bloomberg,TICKER Index,PX_LAST,,
+
+# LocalFile-specific (includes path column, excludes field)
+Catalog.csv_template(source="localfile", path="localfile_template.csv")
+# my_name,source,symbol,path,description,unit
+# example_name,localfile,COLUMN_NAME,/path/to/file.csv,,
+```
+
+### Creating a Catalog from CSV
+
+Load entries from a CSV file:
+
+```python
+catalog = Catalog.from_csv("my_catalog.csv")
+```
+
+Load from multiple files:
+
+```python
+catalog = Catalog.from_csv(["equities.csv", "macro.csv"])
+```
+
+### Exporting to YAML
+
+Convert your CSV-loaded catalog to YAML:
+
+```python
+catalog = Catalog.from_csv("my_catalog.csv")
+catalog.to_yaml("catalog.yaml")
+```
+
+### Roundtrip Editing
+
+Edit an existing YAML catalog in a spreadsheet:
+
+```python
+from metapyle.catalog import Catalog
+
+# Export existing YAML to CSV for editing
+catalog = Catalog.from_yaml("catalog.yaml")
+catalog.to_csv("catalog_edit.csv")
+
+# ... edit in Excel/Sheets ...
+
+# Re-import and save
+updated = Catalog.from_csv("catalog_edit.csv")
+updated.to_yaml("catalog.yaml")
+```
+
+### Validation
+
+`from_csv()` validates all rows and reports all errors at once:
+
+```python
+# If CSV has errors, all are reported together:
+# CatalogValidationError: CSV validation failed (3 errors):
+#   Row 2: missing required columns: source
+#   Row 3: unknown source 'invalid', must be one of: bloomberg, localfile, macrobond
+#   Row 5: duplicate my_name 'sp500_close' (first seen in row 2)
+```
 
 ---
 

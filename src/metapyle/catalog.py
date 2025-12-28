@@ -210,7 +210,7 @@ class Catalog:
         return cls(entries)
 
     @staticmethod
-    def _parse_entry(raw: dict[str, Any], source_file: str) -> CatalogEntry:
+    def _parse_entry(raw: dict[str, Any], source_file: str | Path) -> CatalogEntry:
         """Parse a raw dictionary into a CatalogEntry."""
         required_fields = ["my_name", "source", "symbol"]
 

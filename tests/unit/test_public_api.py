@@ -10,6 +10,7 @@ def test_public_api_exports() -> None:
         Client,
         DuplicateNameError,
         FetchError,
+        FetchRequest,
         MetapyleError,
         NoDataError,
         SymbolNotFoundError,
@@ -19,6 +20,7 @@ def test_public_api_exports() -> None:
 
     assert Client is not None
     assert BaseSource is not None
+    assert FetchRequest is not None
     assert register_source is not None
     assert MetapyleError is not None
     assert CatalogError is not None

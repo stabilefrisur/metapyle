@@ -10,7 +10,20 @@ from metapyle.sources import (
     localfile,  # noqa: F401
     macrobond,  # noqa: F401
 )
-from metapyle.sources.base import BaseSource, SourceRegistry, register_source
+from metapyle.sources.base import (
+    BaseSource,
+    FetchRequest,
+    SourceRegistry,
+    make_column_name,
+    register_source,
+)
 from metapyle.sources.macrobond import MacrobondSource
 
-__all__ = ["BaseSource", "MacrobondSource", "SourceRegistry", "register_source"]
+__all__ = [
+    "BaseSource",
+    "FetchRequest",
+    "MacrobondSource",
+    "SourceRegistry",
+    "make_column_name",
+    "register_source",
+]

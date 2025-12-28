@@ -15,12 +15,13 @@ from metapyle.exceptions import (
     SymbolNotFoundError,
     UnknownSourceError,
 )
-from metapyle.sources import BaseSource, register_source
+from metapyle.sources import BaseSource, FetchRequest, register_source
 
 __all__ = [
     "__version__",
     "Client",
     "BaseSource",
+    "FetchRequest",
     "register_source",
     "MetapyleError",
     "CatalogError",

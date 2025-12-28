@@ -67,13 +67,13 @@ class Catalog:
         self._entries = entries
 
     @classmethod
-    def from_yaml(cls, paths: str | list[str]) -> Self:
+    def from_yaml(cls, paths: str | Path | list[str | Path]) -> Self:
         """
         Load catalog entries from one or more YAML files.
 
         Parameters
         ----------
-        paths : str | list[str]
+        paths : str | Path | list[str | Path]
             Path or list of paths to YAML catalog files.
 
         Returns
@@ -88,7 +88,7 @@ class Catalog:
         DuplicateNameError
             If the same my_name appears in multiple entries.
         """
-        if isinstance(paths, str):
+        if isinstance(paths, (str, Path)):
             paths = [paths]
 
         entries: dict[str, CatalogEntry] = {}

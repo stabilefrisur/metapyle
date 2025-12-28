@@ -152,6 +152,46 @@ def test_catalog_load_from_yaml(tmp_path: Path) -> None:
     assert spx.field == "PX_LAST"
 
 
+def test_catalog_load_from_yaml_with_path_object(tmp_path: Path) -> None:
+    """Catalog.from_yaml() accepts Path objects."""
+    yaml_content = """
+- my_name: GDP_US
+  source: bloomberg
+  symbol: GDP CUR$ Index
+"""
+    yaml_file = tmp_path / "catalog.yaml"
+    yaml_file.write_text(yaml_content)
+
+    # Pass Path object instead of string
+    catalog = Catalog.from_yaml(yaml_file)
+
+    assert len(catalog) == 1
+    assert "GDP_US" in catalog
+
+
+def test_catalog_load_from_yaml_with_mixed_path_types(tmp_path: Path) -> None:
+    """Catalog.from_yaml() accepts mixed str and Path in list."""
+    yaml1 = """
+- my_name: GDP_US
+  source: bloomberg
+  symbol: GDP CUR$ Index
+"""
+    yaml2 = """
+- my_name: SPX_CLOSE
+  source: bloomberg
+  symbol: SPX Index
+"""
+    file1 = tmp_path / "catalog1.yaml"
+    file2 = tmp_path / "catalog2.yaml"
+    file1.write_text(yaml1)
+    file2.write_text(yaml2)
+
+    # Mix Path and str
+    catalog = Catalog.from_yaml([file1, str(file2)])
+
+    assert len(catalog) == 2
+
+
 def test_catalog_load_missing_required_field(tmp_path: Path) -> None:
     """Catalog raises CatalogValidationError for missing required fields."""
     yaml_content = """

@@ -83,9 +83,7 @@ class BloombergSource(BaseSource):
         blp = _get_blp()
         if blp is None:
             logger.error("fetch_failed: reason=xbbg_not_installed")
-            raise FetchError(
-                "xbbg package is not installed. Install with: pip install xbbg"
-            )
+            raise FetchError("xbbg package is not installed. Install with: pip install xbbg")
 
         # Collect unique tickers and fields
         tickers = list(dict.fromkeys(req.symbol for req in requests))
@@ -115,10 +113,7 @@ class BloombergSource(BaseSource):
 
         # Rename columns from MultiIndex (ticker, field) to "ticker::field"
         if isinstance(df.columns, pd.MultiIndex):
-            df.columns = [
-                make_column_name(ticker, field)
-                for ticker, field in df.columns
-            ]
+            df.columns = [make_column_name(ticker, field) for ticker, field in df.columns]
         else:
             # Single ticker/field case
             req = requests[0]
@@ -126,10 +121,7 @@ class BloombergSource(BaseSource):
             df.columns = [make_column_name(req.symbol, field)]
 
         # Filter to only requested symbol::field combinations
-        requested_cols = [
-            make_column_name(req.symbol, req.field or "PX_LAST")
-            for req in requests
-        ]
+        requested_cols = [make_column_name(req.symbol, req.field or "PX_LAST") for req in requests]
         df = df[[c for c in requested_cols if c in df.columns]]
 
         logger.info(

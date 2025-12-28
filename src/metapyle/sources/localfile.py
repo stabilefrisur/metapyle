@@ -65,8 +65,10 @@ class LocalFileSource(BaseSource):
             logger.error("fetch_failed: reason=different_paths")
             raise FetchError("All requests must reference the same path")
 
+        # Type narrowing: path is guaranteed non-None after validation above
         path = requests[0].path
-        assert path is not None  # for type checker
+        if path is None:  # pragma: no cover - validated above
+            raise FetchError("path is required for localfile source")
         file_path = Path(path)
         symbols = [req.symbol for req in requests]
 

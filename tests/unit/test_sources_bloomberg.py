@@ -25,13 +25,9 @@ class TestBloombergSourceFetch:
             {"PX_LAST": [100.0, 101.0]},
             index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
         )
-        mock_df.columns = pd.MultiIndex.from_tuples(
-            [("SPX Index", "PX_LAST")]
-        )
+        mock_df.columns = pd.MultiIndex.from_tuples([("SPX Index", "PX_LAST")])
 
-        with patch(
-            "metapyle.sources.bloomberg._get_blp"
-        ) as mock_get_blp:
+        with patch("metapyle.sources.bloomberg._get_blp") as mock_get_blp:
             mock_blp = MagicMock()
             mock_blp.bdh.return_value = mock_df
             mock_get_blp.return_value = mock_blp
@@ -42,22 +38,20 @@ class TestBloombergSourceFetch:
             assert list(df.columns) == ["SPX Index::PX_LAST"]
             assert len(df) == 2
 
-    def test_multiple_requests_same_field(
-        self, source: BloombergSource
-    ) -> None:
+    def test_multiple_requests_same_field(self, source: BloombergSource) -> None:
         """Fetch multiple symbols with same field."""
         mock_df = pd.DataFrame(
             [[100.0, 200.0], [101.0, 201.0]],
             index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
-            columns=pd.MultiIndex.from_tuples([
-                ("SPX Index", "PX_LAST"),
-                ("AAPL US Equity", "PX_LAST"),
-            ]),
+            columns=pd.MultiIndex.from_tuples(
+                [
+                    ("SPX Index", "PX_LAST"),
+                    ("AAPL US Equity", "PX_LAST"),
+                ]
+            ),
         )
 
-        with patch(
-            "metapyle.sources.bloomberg._get_blp"
-        ) as mock_get_blp:
+        with patch("metapyle.sources.bloomberg._get_blp") as mock_get_blp:
             mock_blp = MagicMock()
             mock_blp.bdh.return_value = mock_df
             mock_get_blp.return_value = mock_blp
@@ -72,22 +66,20 @@ class TestBloombergSourceFetch:
             assert "AAPL US Equity::PX_LAST" in df.columns
             mock_blp.bdh.assert_called_once()
 
-    def test_multiple_fields_same_symbol(
-        self, source: BloombergSource
-    ) -> None:
+    def test_multiple_fields_same_symbol(self, source: BloombergSource) -> None:
         """Fetch multiple fields for same symbol."""
         mock_df = pd.DataFrame(
             [[100.0, 105.0], [101.0, 106.0]],
             index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
-            columns=pd.MultiIndex.from_tuples([
-                ("SPX Index", "PX_LAST"),
-                ("SPX Index", "PX_HIGH"),
-            ]),
+            columns=pd.MultiIndex.from_tuples(
+                [
+                    ("SPX Index", "PX_LAST"),
+                    ("SPX Index", "PX_HIGH"),
+                ]
+            ),
         )
 
-        with patch(
-            "metapyle.sources.bloomberg._get_blp"
-        ) as mock_get_blp:
+        with patch("metapyle.sources.bloomberg._get_blp") as mock_get_blp:
             mock_blp = MagicMock()
             mock_blp.bdh.return_value = mock_df
             mock_get_blp.return_value = mock_blp
@@ -107,13 +99,9 @@ class TestBloombergSourceFetch:
             {"PX_LAST": [100.0]},
             index=pd.to_datetime(["2024-01-01"]),
         )
-        mock_df.columns = pd.MultiIndex.from_tuples(
-            [("SPX Index", "PX_LAST")]
-        )
+        mock_df.columns = pd.MultiIndex.from_tuples([("SPX Index", "PX_LAST")])
 
-        with patch(
-            "metapyle.sources.bloomberg._get_blp"
-        ) as mock_get_blp:
+        with patch("metapyle.sources.bloomberg._get_blp") as mock_get_blp:
             mock_blp = MagicMock()
             mock_blp.bdh.return_value = mock_df
             mock_get_blp.return_value = mock_blp
@@ -125,18 +113,14 @@ class TestBloombergSourceFetch:
 
     def test_xbbg_not_available(self, source: BloombergSource) -> None:
         """Raise FetchError when xbbg not installed."""
-        with patch(
-            "metapyle.sources.bloomberg._get_blp", return_value=None
-        ):
+        with patch("metapyle.sources.bloomberg._get_blp", return_value=None):
             requests = [FetchRequest(symbol="SPX Index", field="PX_LAST")]
             with pytest.raises(FetchError, match="xbbg"):
                 source.fetch(requests, "2024-01-01", "2024-01-02")
 
     def test_empty_result_raises(self, source: BloombergSource) -> None:
         """Raise NoDataError when Bloomberg returns empty."""
-        with patch(
-            "metapyle.sources.bloomberg._get_blp"
-        ) as mock_get_blp:
+        with patch("metapyle.sources.bloomberg._get_blp") as mock_get_blp:
             mock_blp = MagicMock()
             mock_blp.bdh.return_value = pd.DataFrame()
             mock_get_blp.return_value = mock_blp

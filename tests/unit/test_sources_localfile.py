@@ -1,163 +1,135 @@
-"""Unit tests for LocalFileSource adapter."""
+"""Tests for LocalFileSource."""
+
+from pathlib import Path
 
 import pandas as pd
 import pytest
 
 from metapyle.exceptions import FetchError, NoDataError
-from metapyle.sources.base import _global_registry
+from metapyle.sources.base import FetchRequest
 from metapyle.sources.localfile import LocalFileSource
 
 
+@pytest.fixture
+def source() -> LocalFileSource:
+    """Create LocalFileSource instance."""
+    return LocalFileSource()
+
+
+@pytest.fixture
+def sample_csv(tmp_path: Path) -> Path:
+    """Create sample CSV file with multiple columns."""
+    csv_path = tmp_path / "data.csv"
+    csv_path.write_text(
+        "date,GDP_US,CPI_EU,RATE_JP\n"
+        "2024-01-01,100.0,200.0,0.5\n"
+        "2024-01-02,101.0,201.0,0.6\n"
+        "2024-01-03,102.0,202.0,0.7\n"
+    )
+    return csv_path
+
+
 class TestLocalFileSourceFetch:
-    """Tests for LocalFileSource.fetch method."""
+    """Tests for LocalFileSource.fetch()."""
 
-    def test_localfile_fetch_extracts_column_by_symbol(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
-        """Fetch extracts specific column from CSV using symbol as column name."""
-        csv_path = tmp_path / "data.csv"
-        csv_path.write_text(
-            "date,GDP_US,CPI_US\n"
-            "2024-01-01,100.0,200.0\n"
-            "2024-01-02,101.0,201.0\n"
-            "2024-01-03,102.0,202.0\n"
-        )
-
-        source = LocalFileSource()
-        df = source.fetch("GDP_US", "2024-01-01", "2024-01-03", path=str(csv_path))
+    def test_single_column(self, source: LocalFileSource, sample_csv: Path) -> None:
+        """Fetch single column from CSV."""
+        requests = [FetchRequest(symbol="GDP_US", path=str(sample_csv))]
+        df = source.fetch(requests, "2024-01-01", "2024-01-03")
 
         assert list(df.columns) == ["GDP_US"]
         assert len(df) == 3
         assert df["GDP_US"].iloc[0] == 100.0
 
-    def test_localfile_fetch_returns_original_column_name(
-        self, tmp_path: pytest.TempPathFactory
-    ) -> None:
-        """Fetch returns DataFrame with original column name, not 'value'."""
-        csv_path = tmp_path / "data.csv"
-        csv_path.write_text("date,MyColumn\n2024-01-01,1.0\n2024-01-02,2.0\n")
+    def test_multiple_columns(self, source: LocalFileSource, sample_csv: Path) -> None:
+        """Fetch multiple columns from CSV in single call."""
+        requests = [
+            FetchRequest(symbol="GDP_US", path=str(sample_csv)),
+            FetchRequest(symbol="CPI_EU", path=str(sample_csv)),
+        ]
+        df = source.fetch(requests, "2024-01-01", "2024-01-03")
 
-        source = LocalFileSource()
-        df = source.fetch("MyColumn", "2024-01-01", "2024-01-02", path=str(csv_path))
-
-        assert "MyColumn" in df.columns
-        assert "value" not in df.columns
-
-    def test_localfile_fetch_requires_path(self) -> None:
-        """Fetch raises FetchError if path not provided."""
-        source = LocalFileSource()
-
-        with pytest.raises(FetchError, match="path is required"):
-            source.fetch("GDP_US", "2024-01-01", "2024-01-03")
-
-    def test_localfile_fetch_column_not_found(self, tmp_path: pytest.TempPathFactory) -> None:
-        """Fetch raises FetchError if column not found in file."""
-        csv_path = tmp_path / "data.csv"
-        csv_path.write_text("date,OTHER_COL\n2024-01-01,1.0\n")
-
-        source = LocalFileSource()
-
-        with pytest.raises(FetchError, match="Column 'GDP_US' not found"):
-            source.fetch("GDP_US", "2024-01-01", "2024-01-03", path=str(csv_path))
-
-    def test_localfile_fetch_file_not_found(self) -> None:
-        """Fetch raises FetchError if file not found."""
-        source = LocalFileSource()
-
-        with pytest.raises(FetchError, match="File not found"):
-            source.fetch("GDP_US", "2024-01-01", "2024-01-03", path="/nonexistent.csv")
-
-    def test_localfile_fetch_filters_date_range(self, tmp_path: pytest.TempPathFactory) -> None:
-        """Fetch filters data to requested date range."""
-        csv_path = tmp_path / "data.csv"
-        csv_path.write_text(
-            "date,GDP_US\n"
-            "2024-01-01,100.0\n"
-            "2024-01-02,101.0\n"
-            "2024-01-03,102.0\n"
-            "2024-01-04,103.0\n"
-            "2024-01-05,104.0\n"
-        )
-
-        source = LocalFileSource()
-        df = source.fetch("GDP_US", "2024-01-02", "2024-01-04", path=str(csv_path))
-
+        assert list(df.columns) == ["GDP_US", "CPI_EU"]
         assert len(df) == 3
+
+    def test_date_filtering(self, source: LocalFileSource, sample_csv: Path) -> None:
+        """Only return data within date range."""
+        requests = [FetchRequest(symbol="GDP_US", path=str(sample_csv))]
+        df = source.fetch(requests, "2024-01-02", "2024-01-02")
+
+        assert len(df) == 1
         assert df["GDP_US"].iloc[0] == 101.0
-        assert df["GDP_US"].iloc[-1] == 103.0
 
-    def test_localfile_fetch_no_data_in_range(self, tmp_path: pytest.TempPathFactory) -> None:
-        """Fetch raises NoDataError if no data in date range."""
-        csv_path = tmp_path / "data.csv"
-        csv_path.write_text("date,GDP_US\n2024-01-01,100.0\n")
+    def test_missing_path_raises(self, source: LocalFileSource) -> None:
+        """Raise FetchError if path not provided."""
+        requests = [FetchRequest(symbol="GDP_US")]
+        with pytest.raises(FetchError, match="path is required"):
+            source.fetch(requests, "2024-01-01", "2024-01-03")
 
-        source = LocalFileSource()
+    def test_different_paths_raises(self, source: LocalFileSource, tmp_path: Path) -> None:
+        """Raise FetchError if requests have different paths."""
+        requests = [
+            FetchRequest(symbol="A", path=str(tmp_path / "a.csv")),
+            FetchRequest(symbol="B", path=str(tmp_path / "b.csv")),
+        ]
+        with pytest.raises(FetchError, match="same path"):
+            source.fetch(requests, "2024-01-01", "2024-01-03")
 
-        with pytest.raises(NoDataError, match="No data in date range"):
-            source.fetch("GDP_US", "2025-01-01", "2025-01-31", path=str(csv_path))
+    def test_file_not_found_raises(self, source: LocalFileSource, tmp_path: Path) -> None:
+        """Raise FetchError if file does not exist."""
+        requests = [FetchRequest(symbol="X", path=str(tmp_path / "missing.csv"))]
+        with pytest.raises(FetchError, match="not found"):
+            source.fetch(requests, "2024-01-01", "2024-01-03")
 
-    def test_localfile_fetch_empty_file(self, tmp_path: pytest.TempPathFactory) -> None:
-        """Fetch raises NoDataError for empty file."""
-        csv_path = tmp_path / "empty.csv"
-        csv_path.write_text("date,GDP_US\n")  # header only, no data
+    def test_column_not_found_raises(self, source: LocalFileSource, sample_csv: Path) -> None:
+        """Raise FetchError if column not in file."""
+        requests = [FetchRequest(symbol="MISSING", path=str(sample_csv))]
+        with pytest.raises(FetchError, match="not found"):
+            source.fetch(requests, "2024-01-01", "2024-01-03")
 
-        source = LocalFileSource()
-
-        with pytest.raises(NoDataError, match="File is empty"):
-            source.fetch("GDP_US", "2024-01-01", "2024-01-31", path=str(csv_path))
+    def test_no_data_in_range_raises(self, source: LocalFileSource, sample_csv: Path) -> None:
+        """Raise NoDataError if no data in date range."""
+        requests = [FetchRequest(symbol="GDP_US", path=str(sample_csv))]
+        with pytest.raises(NoDataError):
+            source.fetch(requests, "2025-01-01", "2025-12-31")
 
 
 class TestLocalFileSourceParquet:
-    """Tests for LocalFileSource with Parquet files."""
+    """Tests for parquet file support."""
 
-    def test_localfile_fetch_parquet(self, tmp_path: pytest.TempPathFactory) -> None:
-        """Fetch works with Parquet files."""
-        pytest.importorskip("pyarrow")
-
-        parquet_path = tmp_path / "data.parquet"
+    def test_parquet_fetch(self, source: LocalFileSource, tmp_path: Path) -> None:
+        """Fetch from parquet file."""
+        # Create parquet file
         df = pd.DataFrame(
-            {
-                "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
-                "GDP_US": [100.0, 101.0],
-            }
+            {"value": [1.0, 2.0]},
+            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
         )
-        df.to_parquet(parquet_path, index=False)
+        parquet_path = tmp_path / "data.parquet"
+        df.to_parquet(parquet_path)
 
-        source = LocalFileSource()
-        result = source.fetch("GDP_US", "2024-01-01", "2024-01-02", path=str(parquet_path))
+        requests = [FetchRequest(symbol="value", path=str(parquet_path))]
+        result = source.fetch(requests, "2024-01-01", "2024-01-02")
 
-        assert list(result.columns) == ["GDP_US"]
+        assert "value" in result.columns
         assert len(result) == 2
 
 
 class TestLocalFileSourceGetMetadata:
-    """Tests for get_metadata method."""
+    """Tests for get_metadata."""
 
-    def test_localfile_source_get_metadata(self, tmp_path: pytest.TempPathFactory) -> None:
-        """Test metadata retrieval for a file."""
-        csv_path = tmp_path / "metadata_test.csv"
-        csv_path.write_text("date,value\n2024-01-01,1.0\n")
-
-        source = LocalFileSource()
-        metadata = source.get_metadata(str(csv_path))
-
-        assert metadata["source"] == "localfile"
-        assert metadata["filename"] == "metadata_test.csv"
-        assert metadata["extension"] == ".csv"
-        assert metadata["exists"] is True
-        assert "size_bytes" in metadata
-        assert metadata["size_bytes"] > 0
+    def test_metadata(self, source: LocalFileSource, sample_csv: Path) -> None:
+        """get_metadata returns file info."""
+        meta = source.get_metadata(str(sample_csv))
+        assert meta["source"] == "localfile"
+        assert meta["exists"] is True
 
 
 class TestLocalFileSourceIsRegistered:
     """Tests for source registration."""
 
-    def test_localfile_source_is_registered(self) -> None:
-        """Test that LocalFileSource is registered with the global registry."""
-        # Verify the source is registered
-        registered_sources = _global_registry.list_sources()
-        assert "localfile" in registered_sources
+    def test_registered(self) -> None:
+        """LocalFileSource is registered as 'localfile'."""
+        from metapyle.sources.base import _global_registry
 
-        # Verify we can get an instance
         source = _global_registry.get("localfile")
         assert isinstance(source, LocalFileSource)

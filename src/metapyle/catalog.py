@@ -331,14 +331,51 @@ class Catalog:
             writer.writeheader()
 
             for entry in self._entries.values():
-                writer.writerow({
-                    "my_name": entry.my_name,
-                    "source": entry.source,
-                    "symbol": entry.symbol,
-                    "field": entry.field or "",
-                    "path": entry.path or "",
-                    "description": entry.description or "",
-                    "unit": entry.unit or "",
-                })
+                writer.writerow(
+                    {
+                        "my_name": entry.my_name,
+                        "source": entry.source,
+                        "symbol": entry.symbol,
+                        "field": entry.field or "",
+                        "path": entry.path or "",
+                        "description": entry.description or "",
+                        "unit": entry.unit or "",
+                    }
+                )
 
         logger.info("catalog_exported_csv: path=%s, entries=%d", path, len(self._entries))
+
+    def to_yaml(self, path: str | Path) -> None:
+        """
+        Export catalog entries to YAML file.
+
+        Parameters
+        ----------
+        path : str | Path
+            Path to output YAML file.
+        """
+        file_path = Path(path)
+
+        entries_list = []
+        for entry in self._entries.values():
+            entry_dict: dict[str, str] = {
+                "my_name": entry.my_name,
+                "source": entry.source,
+                "symbol": entry.symbol,
+            }
+            # Only include non-None optional fields
+            if entry.field is not None:
+                entry_dict["field"] = entry.field
+            if entry.path is not None:
+                entry_dict["path"] = entry.path
+            if entry.description is not None:
+                entry_dict["description"] = entry.description
+            if entry.unit is not None:
+                entry_dict["unit"] = entry.unit
+
+            entries_list.append(entry_dict)
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(entries_list, f, default_flow_style=False, sort_keys=False)
+
+        logger.info("catalog_exported_yaml: path=%s, entries=%d", path, len(self._entries))

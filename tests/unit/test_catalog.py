@@ -750,3 +750,90 @@ def test_catalog_to_csv_roundtrip(tmp_path: Path) -> None:
     assert reloaded_entry.field == entry.field
     assert reloaded_entry.description == entry.description
     assert reloaded_entry.unit == entry.unit
+
+
+# ============================================================================
+# YAML Export Tests
+# ============================================================================
+
+
+def test_catalog_to_yaml(tmp_path: Path) -> None:
+    """Catalog.to_yaml() exports entries to YAML file."""
+    entry = CatalogEntry(
+        my_name="sp500_close",
+        source="bloomberg",
+        symbol="SPX Index",
+        field="PX_LAST",
+        description="S&P 500 close",
+    )
+    catalog = Catalog({"sp500_close": entry})
+
+    output = tmp_path / "output.yaml"
+    catalog.to_yaml(output)
+
+    assert output.exists()
+    content = output.read_text()
+    assert "my_name: sp500_close" in content
+    assert "source: bloomberg" in content
+    assert "symbol: SPX Index" in content
+
+
+def test_catalog_to_yaml_accepts_string_path(tmp_path: Path) -> None:
+    """to_yaml() accepts string path."""
+    entry = CatalogEntry(
+        my_name="test",
+        source="bloomberg",
+        symbol="TEST",
+    )
+    catalog = Catalog({"test": entry})
+
+    output = tmp_path / "output.yaml"
+    catalog.to_yaml(str(output))
+
+    assert output.exists()
+
+
+def test_catalog_to_yaml_omits_none_fields(tmp_path: Path) -> None:
+    """to_yaml() omits fields that are None."""
+    entry = CatalogEntry(
+        my_name="test",
+        source="bloomberg",
+        symbol="TEST",
+        # field, path, description, unit all None
+    )
+    catalog = Catalog({"test": entry})
+
+    output = tmp_path / "output.yaml"
+    catalog.to_yaml(output)
+
+    content = output.read_text()
+    assert "field:" not in content
+    assert "path:" not in content
+    assert "description:" not in content
+    assert "unit:" not in content
+
+
+def test_catalog_to_yaml_roundtrip(tmp_path: Path) -> None:
+    """to_yaml() output can be loaded back with from_yaml()."""
+    entry = CatalogEntry(
+        my_name="sp500_close",
+        source="bloomberg",
+        symbol="SPX Index",
+        field="PX_LAST",
+        description="S&P 500 close",
+        unit="points",
+    )
+    original = Catalog({"sp500_close": entry})
+
+    yaml_file = tmp_path / "roundtrip.yaml"
+    original.to_yaml(yaml_file)
+
+    reloaded = Catalog.from_yaml(yaml_file)
+
+    assert len(reloaded) == 1
+    reloaded_entry = reloaded.get("sp500_close")
+    assert reloaded_entry.source == entry.source
+    assert reloaded_entry.symbol == entry.symbol
+    assert reloaded_entry.field == entry.field
+    assert reloaded_entry.description == entry.description
+    assert reloaded_entry.unit == entry.unit

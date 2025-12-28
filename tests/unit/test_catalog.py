@@ -427,3 +427,95 @@ def test_csv_template_unknown_source_raises() -> None:
     """csv_template() raises ValueError for unknown source."""
     with pytest.raises(ValueError, match="Unknown source"):
         Catalog.csv_template(source="unknown")
+
+
+# ============================================================================
+# CSV Loading Tests
+# ============================================================================
+
+
+def test_catalog_from_csv_single_file(tmp_path: Path) -> None:
+    """Catalog.from_csv() loads entries from CSV file."""
+    csv_content = """my_name,source,symbol,field,path,description,unit
+sp500_close,bloomberg,SPX Index,PX_LAST,,S&P 500 close,points
+gdp_us,localfile,GDP_US,,/data/macro.csv,US GDP,USD billions
+"""
+    csv_file = tmp_path / "catalog.csv"
+    csv_file.write_text(csv_content)
+
+    catalog = Catalog.from_csv(csv_file)
+
+    assert len(catalog) == 2
+    assert "sp500_close" in catalog
+    assert "gdp_us" in catalog
+
+    spx = catalog.get("sp500_close")
+    assert spx.source == "bloomberg"
+    assert spx.symbol == "SPX Index"
+    assert spx.field == "PX_LAST"
+    assert spx.path is None
+    assert spx.description == "S&P 500 close"
+    assert spx.unit == "points"
+
+    gdp = catalog.get("gdp_us")
+    assert gdp.source == "localfile"
+    assert gdp.path == "/data/macro.csv"
+
+
+def test_catalog_from_csv_accepts_string_path(tmp_path: Path) -> None:
+    """Catalog.from_csv() accepts string path."""
+    csv_content = """my_name,source,symbol
+test_entry,bloomberg,TEST Index
+"""
+    csv_file = tmp_path / "catalog.csv"
+    csv_file.write_text(csv_content)
+
+    catalog = Catalog.from_csv(str(csv_file))
+
+    assert len(catalog) == 1
+    assert "test_entry" in catalog
+
+
+def test_catalog_from_csv_empty_optional_fields_are_none(tmp_path: Path) -> None:
+    """Empty optional fields in CSV become None."""
+    csv_content = """my_name,source,symbol,field,path,description,unit
+test_entry,bloomberg,TEST Index,,,,
+"""
+    csv_file = tmp_path / "catalog.csv"
+    csv_file.write_text(csv_content)
+
+    catalog = Catalog.from_csv(csv_file)
+    entry = catalog.get("test_entry")
+
+    assert entry.field is None
+    assert entry.path is None
+    assert entry.description is None
+    assert entry.unit is None
+
+
+def test_catalog_from_csv_row_with_missing_fields_and_duplicate_name(tmp_path: Path) -> None:
+    """Row with both missing fields and duplicate name reports only missing field errors.
+
+    A row with missing required fields should be skipped before checking for
+    duplicates, so only the missing field error should be reported, not a
+    duplicate error for a name that may also appear in a valid row.
+    """
+    csv_content = """my_name,source,symbol
+valid_entry,bloomberg,SPX Index
+valid_entry,,
+"""
+    # Row 3 has valid_entry (duplicate), but also missing source and symbol.
+    # Should report only missing field errors, not duplicate error.
+    csv_file = tmp_path / "catalog.csv"
+    csv_file.write_text(csv_content)
+
+    with pytest.raises(CatalogValidationError) as exc_info:
+        Catalog.from_csv(csv_file)
+
+    error_message = str(exc_info.value)
+    # Should have errors for missing source and symbol on row 3
+    assert "Row 3:" in error_message
+    assert "source" in error_message
+    assert "symbol" in error_message
+    # Should NOT have a duplicate error - row should be skipped before that check
+    assert "Duplicate" not in error_message

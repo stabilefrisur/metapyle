@@ -1,5 +1,6 @@
 """Catalog system for mapping human-readable names to data sources."""
 
+import csv
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -127,6 +128,85 @@ class Catalog:
                 entries[entry.my_name] = entry
 
         logger.info("catalog_loaded: entries=%d", len(entries))
+        return cls(entries)
+
+    @classmethod
+    def from_csv(cls, paths: str | Path | list[str | Path]) -> Self:
+        """
+        Load catalog entries from one or more CSV files.
+
+        Parameters
+        ----------
+        paths : str | Path | list[str | Path]
+            Path or list of paths to CSV catalog files.
+
+        Returns
+        -------
+        Catalog
+            Catalog instance with loaded entries.
+
+        Raises
+        ------
+        CatalogValidationError
+            If file not found, CSV malformed, or entries invalid.
+            Reports all validation errors at once.
+        DuplicateNameError
+            If the same my_name appears in multiple entries.
+        """
+        if isinstance(paths, (str, Path)):
+            paths = [paths]
+
+        entries: dict[str, CatalogEntry] = {}
+        errors: list[str] = []
+
+        for path in paths:
+            file_path = Path(path)
+
+            if not file_path.exists():
+                raise CatalogValidationError(f"Catalog file not found: {path}")
+
+            logger.info("loading_catalog_csv: path=%s", path)
+
+            with open(file_path, newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+
+                for row_num, row in enumerate(reader, start=2):  # Row 1 is header
+                    # Trim whitespace from all values
+                    row = {k: v.strip() if v else v for k, v in row.items()}
+
+                    # Check required fields
+                    for field in ["my_name", "source", "symbol"]:
+                        if not row.get(field):
+                            errors.append(f"Row {row_num}: Missing required field '{field}'")
+
+                    # Skip row if any errors already found for this row
+                    if any(f"Row {row_num}:" in e for e in errors):
+                        continue
+
+                    my_name = row.get("my_name", "")
+
+                    # Check for duplicates
+                    if my_name in entries:
+                        errors.append(f"Row {row_num}: Duplicate my_name '{my_name}'")
+                        continue
+
+                    # Create entry (empty strings become None)
+                    entry = CatalogEntry(
+                        my_name=my_name,
+                        source=row.get("source", ""),
+                        symbol=row.get("symbol", ""),
+                        field=row.get("field") or None,
+                        path=row.get("path") or None,
+                        description=row.get("description") or None,
+                        unit=row.get("unit") or None,
+                    )
+                    entries[my_name] = entry
+
+        if errors:
+            error_list = "\n  ".join(errors)
+            raise CatalogValidationError(f"{len(errors)} error(s) in CSV:\n  {error_list}")
+
+        logger.info("catalog_loaded_csv: entries=%d", len(entries))
         return cls(entries)
 
     @staticmethod

@@ -77,7 +77,12 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-v", "--strict-markers", "--tb=short"]
-markers = ["integration: integration tests requiring external credentials"]
+markers = [
+    "integration: integration tests requiring external credentials",
+    "bloomberg: tests requiring Bloomberg access",
+    "macrobond: tests requiring Macrobond access",
+    "private: tests requiring private/in-house series (skipped by default)",
+]
 
 [tool.coverage.run]
 source = ["src"]

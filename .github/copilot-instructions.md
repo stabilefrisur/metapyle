@@ -369,6 +369,22 @@ class CatalogEntry:
     unit: str | None = None         # optional
 ```
 
+### Catalog CSV Import/Export
+
+```python
+# Generate CSV template (generic or source-specific)
+Catalog.csv_template(source="bloomberg", path="template.csv")
+
+# Load from CSV (validates all rows, reports all errors at once)
+catalog = Catalog.from_csv("catalog.csv")  # or list of paths
+
+# Export to CSV/YAML
+catalog.to_csv("output.csv")
+catalog.to_yaml("catalog.yaml")
+```
+
+`from_yaml()` and `Client()` accept `str | Path | list[str | Path]`.
+
 ### Cache Key Components
 
 Cache stores data **per-symbol** (not per-batch). Each cache entry uses:

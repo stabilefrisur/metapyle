@@ -68,6 +68,7 @@ with Client(catalog="catalog.yaml") as client:
 See the [User Guide](docs/user-guide.md) for complete documentation, including:
 
 - Catalog configuration
+- Creating catalogs from CSV
 - Frequency alignment
 - Caching
 - Available data sources

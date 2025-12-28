@@ -13,10 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `fetch()` with raw mode using `get_one_series`
   - `fetch()` with unified mode using `get_unified_series` for frequency/currency alignment
   - `get_metadata()` for retrieving series metadata
+- `FetchRequest` dataclass exported in public API for custom source implementations
+- `make_column_name()` utility function for consistent column naming across sources
 
 ### Changed
 
 - `end` parameter in `get()` and `get_raw()` is now optional, defaulting to today's date
+- **BREAKING:** `BaseSource.fetch()` now accepts `Sequence[FetchRequest]` instead of individual symbol parameters, enabling batch fetching for improved performance
+- **BREAKING:** Bloomberg source column naming changed from `symbol_field` to `symbol::field` format (e.g., `AAPL US Equity::PX_LAST`)
+- Internal: Client groups multi-symbol requests by source and performs batch fetching to reduce API calls
 
 ## [0.1.0] - 2025-12-27
 

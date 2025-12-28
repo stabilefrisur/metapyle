@@ -391,3 +391,39 @@ def test_csv_template_generic_writes_file_str_path(tmp_path: Path) -> None:
 
     assert output.exists()
     assert result == "my_name,source,symbol,field,path,description,unit\n"
+
+
+def test_csv_template_bloomberg() -> None:
+    """csv_template(source='bloomberg') returns bloomberg columns + example row."""
+    template = Catalog.csv_template(source="bloomberg")
+
+    lines = template.strip().split("\n")
+    assert len(lines) == 2
+    assert lines[0] == "my_name,source,symbol,field,description,unit"
+    assert lines[1] == ",bloomberg,,,,"
+
+
+def test_csv_template_localfile() -> None:
+    """csv_template(source='localfile') returns localfile columns + example row."""
+    template = Catalog.csv_template(source="localfile")
+
+    lines = template.strip().split("\n")
+    assert len(lines) == 2
+    assert lines[0] == "my_name,source,symbol,path,description,unit"
+    assert lines[1] == ",localfile,,,,"
+
+
+def test_csv_template_macrobond() -> None:
+    """csv_template(source='macrobond') returns macrobond columns + example row."""
+    template = Catalog.csv_template(source="macrobond")
+
+    lines = template.strip().split("\n")
+    assert len(lines) == 2
+    assert lines[0] == "my_name,source,symbol,description,unit"
+    assert lines[1] == ",macrobond,,,"
+
+
+def test_csv_template_unknown_source_raises() -> None:
+    """csv_template() raises ValueError for unknown source."""
+    with pytest.raises(ValueError, match="Unknown source"):
+        Catalog.csv_template(source="unknown")

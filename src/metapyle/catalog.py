@@ -22,6 +22,12 @@ logger = logging.getLogger(__name__)
 
 _ALL_COLUMNS = ["my_name", "source", "symbol", "field", "path", "description", "unit"]
 
+_SOURCE_COLUMNS: dict[str, list[str]] = {
+    "bloomberg": ["my_name", "source", "symbol", "field", "description", "unit"],
+    "localfile": ["my_name", "source", "symbol", "path", "description", "unit"],
+    "macrobond": ["my_name", "source", "symbol", "description", "unit"],
+}
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CatalogEntry:
@@ -213,8 +219,16 @@ class Catalog:
             columns = _ALL_COLUMNS
             template = ",".join(columns) + "\n"
         else:
-            # Source-specific templates handled in next task
-            raise NotImplementedError(f"Source-specific template not yet implemented: {source}")
+            if source not in _SOURCE_COLUMNS:
+                valid = ", ".join(sorted(_SOURCE_COLUMNS.keys()))
+                raise ValueError(f"Unknown source: {source}. Valid sources: {valid}")
+
+            columns = _SOURCE_COLUMNS[source]
+            header = ",".join(columns)
+            # Example row: only source column filled, rest empty
+            example_values = [source if col == "source" else "" for col in columns]
+            example = ",".join(example_values)
+            template = f"{header}\n{example}\n"
 
         if path is not None:
             Path(path).write_text(template)

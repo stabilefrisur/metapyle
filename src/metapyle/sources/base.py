@@ -1,7 +1,7 @@
 """Base source interface and registry."""
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -60,35 +60,32 @@ class BaseSource(ABC):
     @abstractmethod
     def fetch(
         self,
-        symbol: str,
+        requests: Sequence[FetchRequest],
         start: str,
         end: str,
-        **kwargs: Any,
     ) -> pd.DataFrame:
         """
-        Fetch time-series data for a symbol.
+        Fetch time-series data for one or more symbols.
 
         Parameters
         ----------
-        symbol : str
-            Source-specific identifier (e.g., "SPX Index" for Bloomberg).
+        requests : Sequence[FetchRequest]
+            One or more fetch requests.
         start : str
             Start date in ISO format (YYYY-MM-DD).
         end : str
             End date in ISO format (YYYY-MM-DD).
-        **kwargs : Any
-            Source-specific parameters (e.g., field for Bloomberg).
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with DatetimeIndex and single column with source-specific
-            name (e.g., the symbol name for localfile, field name for Bloomberg).
+            DataFrame with DatetimeIndex and one column per request.
+            Column naming: "symbol::field" if field present, otherwise "symbol".
 
         Raises
         ------
         NoDataError
-            If no data is returned for the symbol.
+            If no data is returned for any symbol.
         FetchError
             If data retrieval fails.
         """

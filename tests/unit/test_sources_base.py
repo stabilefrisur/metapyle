@@ -1,5 +1,7 @@
 """Unit tests for BaseSource ABC and SourceRegistry."""
 
+from collections.abc import Sequence
+
 import pandas as pd
 import pytest
 
@@ -25,7 +27,7 @@ def test_base_source_requires_fetch_method() -> None:
 
     class IncompleteSource(BaseSource):
         def get_metadata(self, symbol: str) -> dict:
-            return {}
+            return {}  # pragma: no cover
 
     with pytest.raises(TypeError, match="Can't instantiate abstract class"):
         IncompleteSource()  # type: ignore[abstract]
@@ -35,8 +37,13 @@ def test_base_source_requires_get_metadata_method() -> None:
     """Subclass must implement get_metadata method."""
 
     class IncompleteSource(BaseSource):
-        def fetch(self, symbol: str, start: str, end: str, **kwargs) -> pd.DataFrame:
-            return pd.DataFrame()
+        def fetch(
+            self,
+            requests: Sequence[FetchRequest],
+            start: str,
+            end: str,
+        ) -> pd.DataFrame:
+            return pd.DataFrame()  # pragma: no cover
 
     with pytest.raises(TypeError, match="Can't instantiate abstract class"):
         IncompleteSource()  # type: ignore[abstract]
@@ -46,7 +53,12 @@ def test_concrete_source_can_be_instantiated() -> None:
     """Concrete subclass with both methods can be instantiated."""
 
     class ConcreteSource(BaseSource):
-        def fetch(self, symbol: str, start: str, end: str, **kwargs) -> pd.DataFrame:
+        def fetch(
+            self,
+            requests: Sequence[FetchRequest],
+            start: str,
+            end: str,
+        ) -> pd.DataFrame:
             return pd.DataFrame({"value": [1, 2, 3]})
 
         def get_metadata(self, symbol: str) -> dict:
@@ -66,7 +78,12 @@ def test_source_registry_register_and_get() -> None:
     """SourceRegistry can register and retrieve sources."""
 
     class TestSource(BaseSource):
-        def fetch(self, symbol: str, start: str, end: str, **kwargs) -> pd.DataFrame:
+        def fetch(
+            self,
+            requests: Sequence[FetchRequest],
+            start: str,
+            end: str,
+        ) -> pd.DataFrame:
             return pd.DataFrame()
 
         def get_metadata(self, symbol: str) -> dict:
@@ -91,7 +108,12 @@ def test_source_registry_list_sources() -> None:
     """SourceRegistry can list all registered sources."""
 
     class TestSource(BaseSource):
-        def fetch(self, symbol: str, start: str, end: str, **kwargs) -> pd.DataFrame:
+        def fetch(
+            self,
+            requests: Sequence[FetchRequest],
+            start: str,
+            end: str,
+        ) -> pd.DataFrame:
             return pd.DataFrame()
 
         def get_metadata(self, symbol: str) -> dict:
@@ -110,7 +132,12 @@ def test_register_source_decorator() -> None:
 
     @register_source("decorated_test")
     class DecoratedSource(BaseSource):
-        def fetch(self, symbol: str, start: str, end: str, **kwargs) -> pd.DataFrame:
+        def fetch(
+            self,
+            requests: Sequence[FetchRequest],
+            start: str,
+            end: str,
+        ) -> pd.DataFrame:
             return pd.DataFrame()
 
         def get_metadata(self, symbol: str) -> dict:
@@ -125,7 +152,12 @@ def test_source_registry_caches_instances() -> None:
     """SourceRegistry returns same instance on repeated get calls."""
 
     class TestSource(BaseSource):
-        def fetch(self, symbol: str, start: str, end: str, **kwargs) -> pd.DataFrame:
+        def fetch(
+            self,
+            requests: Sequence[FetchRequest],
+            start: str,
+            end: str,
+        ) -> pd.DataFrame:
             return pd.DataFrame()
 
         def get_metadata(self, symbol: str) -> dict:

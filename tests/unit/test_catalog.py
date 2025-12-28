@@ -652,3 +652,101 @@ entry2,localfile,TEST2
     catalog = Catalog.from_csv([file1, str(file2)])
 
     assert len(catalog) == 2
+
+
+# ============================================================================
+# CSV Export Tests
+# ============================================================================
+
+
+def test_catalog_to_csv(tmp_path: Path) -> None:
+    """Catalog.to_csv() exports entries to CSV file."""
+    entry1 = CatalogEntry(
+        my_name="sp500_close",
+        source="bloomberg",
+        symbol="SPX Index",
+        field="PX_LAST",
+        description="S&P 500 close",
+        unit="points",
+    )
+    entry2 = CatalogEntry(
+        my_name="gdp_us",
+        source="localfile",
+        symbol="GDP_US",
+        path="/data/macro.csv",
+    )
+    catalog = Catalog({"sp500_close": entry1, "gdp_us": entry2})
+
+    output = tmp_path / "output.csv"
+    catalog.to_csv(output)
+
+    assert output.exists()
+    content = output.read_text()
+    lines = content.strip().split("\n")
+
+    # Check header
+    assert lines[0] == "my_name,source,symbol,field,path,description,unit"
+
+    # Check we have 3 lines (header + 2 entries)
+    assert len(lines) == 3
+
+
+def test_catalog_to_csv_accepts_string_path(tmp_path: Path) -> None:
+    """to_csv() accepts string path."""
+    entry = CatalogEntry(
+        my_name="test",
+        source="bloomberg",
+        symbol="TEST",
+    )
+    catalog = Catalog({"test": entry})
+
+    output = tmp_path / "output.csv"
+    catalog.to_csv(str(output))
+
+    assert output.exists()
+
+
+def test_catalog_to_csv_none_values_as_empty(tmp_path: Path) -> None:
+    """to_csv() writes None values as empty strings."""
+    entry = CatalogEntry(
+        my_name="test",
+        source="bloomberg",
+        symbol="TEST",
+        # field, path, description, unit all None
+    )
+    catalog = Catalog({"test": entry})
+
+    output = tmp_path / "output.csv"
+    catalog.to_csv(output)
+
+    content = output.read_text()
+    lines = content.strip().split("\n")
+
+    # Entry line should have empty fields for None values
+    assert lines[1] == "test,bloomberg,TEST,,,,"
+
+
+def test_catalog_to_csv_roundtrip(tmp_path: Path) -> None:
+    """to_csv() output can be loaded back with from_csv()."""
+    entry = CatalogEntry(
+        my_name="sp500_close",
+        source="bloomberg",
+        symbol="SPX Index",
+        field="PX_LAST",
+        description="S&P 500 close",
+        unit="points",
+    )
+    original = Catalog({"sp500_close": entry})
+
+    csv_file = tmp_path / "roundtrip.csv"
+    original.to_csv(csv_file)
+
+    reloaded = Catalog.from_csv(csv_file)
+
+    assert len(reloaded) == 1
+    reloaded_entry = reloaded.get("sp500_close")
+    assert reloaded_entry.source == entry.source
+    assert reloaded_entry.symbol == entry.symbol
+    assert reloaded_entry.field == entry.field
+    assert reloaded_entry.description == entry.description
+    assert reloaded_entry.unit == entry.unit

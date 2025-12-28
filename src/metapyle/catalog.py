@@ -314,3 +314,31 @@ class Catalog:
             Path(path).write_text(template)
 
         return template
+
+    def to_csv(self, path: str | Path) -> None:
+        """
+        Export catalog entries to CSV file.
+
+        Parameters
+        ----------
+        path : str | Path
+            Path to output CSV file.
+        """
+        file_path = Path(path)
+
+        with open(file_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=_ALL_COLUMNS)
+            writer.writeheader()
+
+            for entry in self._entries.values():
+                writer.writerow({
+                    "my_name": entry.my_name,
+                    "source": entry.source,
+                    "symbol": entry.symbol,
+                    "field": entry.field or "",
+                    "path": entry.path or "",
+                    "description": entry.description or "",
+                    "unit": entry.unit or "",
+                })
+
+        logger.info("catalog_exported_csv: path=%s, entries=%d", path, len(self._entries))

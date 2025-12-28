@@ -1,5 +1,6 @@
 """Unit tests for Client class."""
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -8,7 +9,7 @@ import pytest
 
 from metapyle.client import Client
 from metapyle.exceptions import SymbolNotFoundError, UnknownSourceError
-from metapyle.sources.base import BaseSource, register_source
+from metapyle.sources.base import BaseSource, FetchRequest, register_source
 
 # ============================================================================
 # Mock Source Fixtures
@@ -21,15 +22,17 @@ class MockSource(BaseSource):
 
     def fetch(
         self,
-        symbol: str,
+        requests: Sequence[FetchRequest],
         start: str,
         end: str,
-        **kwargs: Any,
     ) -> pd.DataFrame:
-        """Return mock data based on symbol."""
+        """Return mock data based on symbols."""
         dates = pd.date_range(start, end, freq="D")
-        data = list(range(len(dates)))
-        return pd.DataFrame({"value": data}, index=dates)
+        result = pd.DataFrame(index=dates)
+        for req in requests:
+            data = list(range(len(dates)))
+            result[req.symbol] = data
+        return result
 
     def get_metadata(self, symbol: str) -> dict[str, Any]:
         """Return mock metadata."""
@@ -42,15 +45,17 @@ class MockMonthlySource(BaseSource):
 
     def fetch(
         self,
-        symbol: str,
+        requests: Sequence[FetchRequest],
         start: str,
         end: str,
-        **kwargs: Any,
     ) -> pd.DataFrame:
         """Return mock monthly data."""
         dates = pd.date_range(start, end, freq="ME")
-        data = list(range(len(dates)))
-        return pd.DataFrame({"value": data}, index=dates)
+        result = pd.DataFrame(index=dates)
+        for req in requests:
+            data = list(range(len(dates)))
+            result[req.symbol] = data
+        return result
 
     def get_metadata(self, symbol: str) -> dict[str, Any]:
         """Return mock metadata."""
@@ -468,7 +473,7 @@ def test_client_get_raw(catalog_yaml: Path, cache_path: str) -> None:
     )
 
     assert isinstance(df, pd.DataFrame)
-    assert "value" in df.columns
+    assert "RAW_SYMBOL" in df.columns  # Column named by symbol
     assert len(df) > 0
     assert isinstance(df.index, pd.DatetimeIndex)
 
@@ -640,7 +645,7 @@ def test_client_get_raw_bloomberg_returns_symbol_field(
     tmp_path: Path,
     mocker: Any,
 ) -> None:
-    """Client.get_raw() for Bloomberg returns symbol_field column name."""
+    """Client.get_raw() for Bloomberg returns symbol::field column name."""
     # Mock Bloomberg
     mock_blp = mocker.MagicMock()
     mock_blp.bdh.return_value = pd.DataFrame(
@@ -666,6 +671,5 @@ def test_client_get_raw_bloomberg_returns_symbol_field(
         field="PX_LAST",
     )
 
-    assert "SPX Index_PX_LAST" in df.columns
-    assert "value" not in df.columns
+    assert "SPX Index::PX_LAST" in df.columns  # Double colon separator
     client.close()

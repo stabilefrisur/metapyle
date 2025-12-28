@@ -2,13 +2,14 @@
 
 import datetime
 import logging
+from itertools import groupby
 from typing import Any, Self
 
 import pandas as pd
 
 from metapyle.cache import Cache
 from metapyle.catalog import Catalog, CatalogEntry
-from metapyle.sources.base import SourceRegistry, _global_registry
+from metapyle.sources.base import FetchRequest, SourceRegistry, _global_registry, make_column_name
 
 __all__ = ["Client"]
 
@@ -110,23 +111,83 @@ class Client:
                 len(symbols),
             )
 
-        # Fetch data for each symbol
+        # Collect cached and uncached entries
         dfs: dict[str, pd.DataFrame] = {}
+        uncached_entries: list[CatalogEntry] = []
+
         for entry in entries:
-            df = self._fetch_symbol(entry, start, end, use_cache)
+            if use_cache:
+                cached = self._cache.get(
+                    source=entry.source,
+                    symbol=entry.symbol,
+                    field=entry.field,
+                    path=entry.path,
+                    start_date=start,
+                    end_date=end,
+                )
+                if cached is not None:
+                    logger.debug(
+                        "fetch_from_cache: symbol=%s, rows=%d",
+                        entry.my_name,
+                        len(cached),
+                    )
+                    dfs[entry.my_name] = cached
+                    continue
 
-            # Apply frequency alignment if requested
-            if frequency is not None:
-                from metapyle.processing import align_to_frequency
+            uncached_entries.append(entry)
 
+        # Batch fetch uncached entries grouped by source
+        if uncached_entries:
+            # Sort by source for groupby
+            sorted_entries = sorted(uncached_entries, key=lambda e: e.source)
+
+            for source_name, group in groupby(sorted_entries, key=lambda e: e.source):
+                group_entries = list(group)
+
+                # Build FetchRequest list for this source
+                requests = [
+                    FetchRequest(
+                        symbol=e.symbol,
+                        field=e.field,
+                        path=e.path,
+                    )
+                    for e in group_entries
+                ]
+
+                # Batch fetch from source
+                result_df = self._fetch_from_source(source_name, requests, start, end)
+
+                # Split result and cache each column
+                for entry in group_entries:
+                    col_name = make_column_name(entry.symbol, entry.field)
+                    if col_name in result_df.columns:
+                        col_df = result_df[[col_name]]
+
+                        # Cache the individual column
+                        if use_cache:
+                            self._cache.put(
+                                source=entry.source,
+                                symbol=entry.symbol,
+                                field=entry.field,
+                                path=entry.path,
+                                start_date=start,
+                                end_date=end,
+                                data=col_df,
+                            )
+
+                        dfs[entry.my_name] = col_df
+
+        # Apply frequency alignment if requested
+        if frequency is not None:
+            from metapyle.processing import align_to_frequency
+
+            for my_name in dfs:
                 logger.debug(
                     "aligning_symbol: symbol=%s, target_frequency=%s",
-                    entry.my_name,
+                    my_name,
                     frequency,
                 )
-                df = align_to_frequency(df, frequency)
-
-            dfs[entry.my_name] = df
+                dfs[my_name] = align_to_frequency(dfs[my_name], frequency)
 
         # Check index alignment if no frequency specified
         if frequency is None:
@@ -173,83 +234,43 @@ class Client:
                     "Outer join may produce NaN values. Consider specifying frequency parameter.",
                 )
 
-    def _fetch_symbol(
+    def _fetch_from_source(
         self,
-        entry: CatalogEntry,
+        source_name: str,
+        requests: list[FetchRequest],
         start: str,
         end: str,
-        use_cache: bool,
     ) -> pd.DataFrame:
         """
-        Fetch data for a single symbol, using cache if available.
+        Fetch data from a source for multiple requests.
 
         Parameters
         ----------
-        entry : CatalogEntry
-            Catalog entry for the symbol.
+        source_name : str
+            Name of the source adapter.
+        requests : list[FetchRequest]
+            Fetch requests for this source.
         start : str
-            Start date in ISO format.
+            Start date.
         end : str
-            End date in ISO format.
-        use_cache : bool
-            Whether to use cached data.
+            End date.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with DatetimeIndex and 'value' column.
+            DataFrame with one column per request.
         """
-        # Try cache first
-        if use_cache:
-            cached = self._cache.get(
-                source=entry.source,
-                symbol=entry.symbol,
-                field=entry.field,
-                path=entry.path,
-                start_date=start,
-                end_date=end,
-            )
-            if cached is not None:
-                logger.debug(
-                    "fetch_from_cache: symbol=%s, rows=%d",
-                    entry.my_name,
-                    len(cached),
-                )
-                return cached
-
-        # Fetch from source
-        source = self._registry.get(entry.source)
-
-        # Build kwargs for source
-        kwargs: dict[str, str] = {}
-        if entry.field is not None:
-            kwargs["field"] = entry.field
-        if entry.path is not None:
-            kwargs["path"] = entry.path
+        source = self._registry.get(source_name)
 
         logger.debug(
-            "fetch_from_source: symbol=%s, source=%s, range=%s/%s",
-            entry.my_name,
-            entry.source,
+            "fetch_from_source: source=%s, requests=%d, range=%s/%s",
+            source_name,
+            len(requests),
             start,
             end,
         )
 
-        df = source.fetch(entry.symbol, start, end, **kwargs)
-
-        # Store in cache
-        if use_cache:
-            self._cache.put(
-                source=entry.source,
-                symbol=entry.symbol,
-                field=entry.field,
-                path=entry.path,
-                start_date=start,
-                end_date=end,
-                data=df,
-            )
-
-        return df
+        return source.fetch(requests, start, end)
 
     def _assemble_dataframe(self, dfs: dict[str, pd.DataFrame]) -> pd.DataFrame:
         """
@@ -411,14 +432,10 @@ class Client:
 
         # Fetch from source
         source_adapter = self._registry.get(source)
-        kwargs: dict[str, str] = {}
-        if field is not None:
-            kwargs["field"] = field
-        if path is not None:
-            kwargs["path"] = path
+        request = FetchRequest(symbol=symbol, field=field, path=path)
 
         logger.debug("get_raw_from_source: source=%s, symbol=%s", source, symbol)
-        df = source_adapter.fetch(symbol, start, end, **kwargs)
+        df = source_adapter.fetch([request], start, end)
 
         # Store in cache
         if use_cache:

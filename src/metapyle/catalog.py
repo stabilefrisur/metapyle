@@ -20,6 +20,8 @@ __all__ = ["Catalog", "CatalogEntry"]
 
 logger = logging.getLogger(__name__)
 
+_ALL_COLUMNS = ["my_name", "source", "symbol", "field", "path", "description", "unit"]
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CatalogEntry:
@@ -187,3 +189,34 @@ class Catalog:
                 f"Unknown source(s) in catalog: {', '.join(sorted(unknown))}. "
                 f"Registered sources: {', '.join(sorted(registered))}"
             )
+
+    @staticmethod
+    def csv_template(source: str | None = None, path: str | Path | None = None) -> str:
+        """
+        Generate CSV template with headers.
+
+        Parameters
+        ----------
+        source : str | None, optional
+            If provided, generates source-specific template with relevant
+            columns only. Valid: "bloomberg", "localfile", "macrobond".
+            If None, includes all columns.
+        path : str | Path | None, optional
+            If provided, writes template to file.
+
+        Returns
+        -------
+        str
+            Template string (header row + optional example row).
+        """
+        if source is None:
+            columns = _ALL_COLUMNS
+            template = ",".join(columns) + "\n"
+        else:
+            # Source-specific templates handled in next task
+            raise NotImplementedError(f"Source-specific template not yet implemented: {source}")
+
+        if path is not None:
+            Path(path).write_text(template)
+
+        return template

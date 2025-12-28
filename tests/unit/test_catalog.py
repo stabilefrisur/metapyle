@@ -358,3 +358,36 @@ def test_catalog_validate_sources_success() -> None:
     registry.register("localfile", type)
 
     catalog.validate_sources(registry)
+
+
+# ============================================================================
+# CSV Template Tests
+# ============================================================================
+
+
+def test_csv_template_generic() -> None:
+    """csv_template() without source returns all columns, no example row."""
+    template = Catalog.csv_template()
+
+    assert template == "my_name,source,symbol,field,path,description,unit\n"
+
+
+def test_csv_template_generic_writes_file(tmp_path: Path) -> None:
+    """csv_template() writes to file when path provided."""
+    output = tmp_path / "template.csv"
+
+    result = Catalog.csv_template(path=output)
+
+    assert output.exists()
+    assert output.read_text() == "my_name,source,symbol,field,path,description,unit\n"
+    assert result == "my_name,source,symbol,field,path,description,unit\n"
+
+
+def test_csv_template_generic_writes_file_str_path(tmp_path: Path) -> None:
+    """csv_template() accepts string path."""
+    output = tmp_path / "template.csv"
+
+    result = Catalog.csv_template(path=str(output))
+
+    assert output.exists()
+    assert result == "my_name,source,symbol,field,path,description,unit\n"

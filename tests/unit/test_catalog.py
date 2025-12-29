@@ -539,6 +539,16 @@ def test_csv_template_macrobond() -> None:
     assert lines[1] == ",macrobond,,,"
 
 
+def test_csv_template_gsquant() -> None:
+    """csv_template(source='gsquant') returns gsquant columns + example row."""
+    template = Catalog.csv_template(source="gsquant")
+
+    lines = template.strip().split("\n")
+    assert len(lines) == 2
+    assert lines[0] == "my_name,source,symbol,field,description,unit"
+    assert lines[1] == ",gsquant,,,,"
+
+
 def test_csv_template_unknown_source_raises() -> None:
     """csv_template() raises ValueError for unknown source."""
     with pytest.raises(ValueError, match="Unknown source"):

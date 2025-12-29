@@ -25,6 +25,7 @@ _ALL_COLUMNS = ["my_name", "source", "symbol", "field", "path", "description", "
 
 _SOURCE_COLUMNS: dict[str, list[str]] = {
     "bloomberg": ["my_name", "source", "symbol", "field", "description", "unit"],
+    "gsquant": ["my_name", "source", "symbol", "field", "description", "unit"],
     "localfile": ["my_name", "source", "symbol", "path", "description", "unit"],
     "macrobond": ["my_name", "source", "symbol", "description", "unit"],
 }

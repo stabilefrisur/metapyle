@@ -41,6 +41,46 @@ class TestCatalogEntryParams:
         assert entry.params is None
 
 
+class TestCatalogYamlParams:
+    """Tests for YAML parsing with params field."""
+
+    def test_from_yaml_with_params(self, tmp_path: Path) -> None:
+        """Catalog.from_yaml parses params field."""
+        yaml_content = """
+- my_name: eurusd_vol
+  source: gsquant
+  symbol: EURUSD
+  field: FXIMPLIEDVOL::impliedVolatility
+  params:
+    tenor: 3m
+    deltaStrike: DN
+    location: NYC
+"""
+        yaml_file = tmp_path / "catalog.yaml"
+        yaml_file.write_text(yaml_content)
+
+        catalog = Catalog.from_yaml(yaml_file)
+        entry = catalog.get("eurusd_vol")
+
+        assert entry.params == {"tenor": "3m", "deltaStrike": "DN", "location": "NYC"}
+
+    def test_from_yaml_without_params(self, tmp_path: Path) -> None:
+        """Catalog.from_yaml works without params field."""
+        yaml_content = """
+- my_name: test_series
+  source: bloomberg
+  symbol: SPX Index
+  field: PX_LAST
+"""
+        yaml_file = tmp_path / "catalog.yaml"
+        yaml_file.write_text(yaml_content)
+
+        catalog = Catalog.from_yaml(yaml_file)
+        entry = catalog.get("test_series")
+
+        assert entry.params is None
+
+
 def test_catalog_entry_required_fields() -> None:
     """CatalogEntry requires my_name, source, symbol."""
     entry = CatalogEntry(

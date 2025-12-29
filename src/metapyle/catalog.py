@@ -229,6 +229,7 @@ class Catalog:
             path=raw.get("path"),
             description=raw.get("description"),
             unit=raw.get("unit"),
+            params=raw.get("params"),
         )
 
     def get(self, name: str) -> CatalogEntry:

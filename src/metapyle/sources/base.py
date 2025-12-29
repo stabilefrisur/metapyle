@@ -25,11 +25,14 @@ class FetchRequest:
         Source-specific field name (e.g., "PX_LAST" for Bloomberg).
     path : str | None
         File path for localfile source.
+    params : dict[str, Any] | None
+        Additional source-specific parameters (e.g., tenor, deltaStrike).
     """
 
     symbol: str
     field: str | None = None
     path: str | None = None
+    params: dict[str, Any] | None = None
 
 
 def make_column_name(symbol: str, field: str | None) -> str:

@@ -51,6 +51,8 @@ class CatalogEntry:
         Human-readable description of the data series.
     unit : str | None, optional
         Unit of measurement (e.g., "USD billions", "points").
+    params : dict[str, Any] | None, optional
+        Additional source-specific parameters (e.g., tenor, deltaStrike for gs-quant).
     """
 
     my_name: str
@@ -60,6 +62,7 @@ class CatalogEntry:
     path: str | None = None
     description: str | None = None
     unit: str | None = None
+    params: dict[str, Any] | None = None
 
 
 class Catalog:
@@ -226,6 +229,7 @@ class Catalog:
             path=raw.get("path"),
             description=raw.get("description"),
             unit=raw.get("unit"),
+            params=raw.get("params"),
         )
 
     def get(self, name: str) -> CatalogEntry:
@@ -358,7 +362,7 @@ class Catalog:
 
         entries_list = []
         for entry in self._entries.values():
-            entry_dict: dict[str, str] = {
+            entry_dict: dict[str, Any] = {
                 "my_name": entry.my_name,
                 "source": entry.source,
                 "symbol": entry.symbol,
@@ -372,6 +376,8 @@ class Catalog:
                 entry_dict["description"] = entry.description
             if entry.unit is not None:
                 entry_dict["unit"] = entry.unit
+            if entry.params is not None:
+                entry_dict["params"] = entry.params
 
             entries_list.append(entry_dict)
 

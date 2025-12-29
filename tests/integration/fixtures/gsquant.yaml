@@ -1,0 +1,20 @@
+# GS-Quant integration test catalog
+# Requires gs-quant installed and authenticated via GsSession
+
+- my_name: EURUSD_VOL
+  source: gsquant
+  symbol: EURUSD
+  field: FXIMPLIEDVOL::impliedVolatility
+  description: EUR/USD FX implied volatility
+  params:
+    tenor: 1m
+    deltaStrike: DN
+
+- my_name: USDJPY_VOL
+  source: gsquant
+  symbol: USDJPY
+  field: FXIMPLIEDVOL::impliedVolatility
+  description: USD/JPY FX implied volatility
+  params:
+    tenor: 1m
+    deltaStrike: DN

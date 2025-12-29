@@ -25,6 +25,9 @@ dependencies = [
     "xbbg>=0.10.0",
 ]
 
+[project.optional-dependencies]
+gsquant = ["gs-quant"]
+
 [project.urls]
 Homepage = "https://github.com/stabilefrisur/metapyle"
 Repository = "https://github.com/stabilefrisur/metapyle"
@@ -71,7 +74,14 @@ ignore = ["E501"]
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["macrobond_data_api.*", "xbbg.*", "pandas.*", "yaml.*"]
+module = [
+    "blpapi",
+    "gs_quant.*",
+    "macrobond_data_api.*",
+    "pandas.*",
+    "xbbg.*",
+    "yaml.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

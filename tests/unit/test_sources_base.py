@@ -207,3 +207,30 @@ class TestFetchRequest:
         req = FetchRequest(symbol="test")
         with pytest.raises(AttributeError):
             req.symbol = "changed"  # type: ignore[misc]
+
+
+class TestFetchRequestParams:
+    """Tests for FetchRequest params field."""
+
+    def test_fetch_request_with_params(self) -> None:
+        """FetchRequest accepts params dict."""
+        params = {"tenor": "3m", "deltaStrike": "DN"}
+        request = FetchRequest(symbol="EURUSD", field="PX_LAST", params=params)
+
+        assert request.symbol == "EURUSD"
+        assert request.field == "PX_LAST"
+        assert request.params == params
+
+    def test_fetch_request_params_default_none(self) -> None:
+        """FetchRequest params defaults to None."""
+        request = FetchRequest(symbol="EURUSD")
+
+        assert request.params is None
+
+    def test_fetch_request_with_params_frozen(self) -> None:
+        """FetchRequest with params is still frozen."""
+        params = {"tenor": "3m"}
+        request = FetchRequest(symbol="EURUSD", params=params)
+
+        with pytest.raises(AttributeError):
+            request.params = {}  # type: ignore[misc]

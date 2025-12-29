@@ -14,6 +14,122 @@ from metapyle.exceptions import (
 from metapyle.sources.base import SourceRegistry
 
 
+class TestCatalogEntryParams:
+    """Tests for CatalogEntry params field."""
+
+    def test_catalog_entry_with_params(self) -> None:
+        """CatalogEntry accepts params dict."""
+        params = {"tenor": "3m", "location": "NYC"}
+        entry = CatalogEntry(
+            my_name="eurusd_vol",
+            source="gsquant",
+            symbol="EURUSD",
+            field="FXIMPLIEDVOL::impliedVolatility",
+            params=params,
+        )
+
+        assert entry.params == params
+
+    def test_catalog_entry_params_default_none(self) -> None:
+        """CatalogEntry params defaults to None."""
+        entry = CatalogEntry(
+            my_name="test",
+            source="bloomberg",
+            symbol="SPX Index",
+        )
+
+        assert entry.params is None
+
+
+class TestCatalogYamlParams:
+    """Tests for YAML parsing with params field."""
+
+    def test_from_yaml_with_params(self, tmp_path: Path) -> None:
+        """Catalog.from_yaml parses params field."""
+        yaml_content = """
+- my_name: eurusd_vol
+  source: gsquant
+  symbol: EURUSD
+  field: FXIMPLIEDVOL::impliedVolatility
+  params:
+    tenor: 3m
+    deltaStrike: DN
+    location: NYC
+"""
+        yaml_file = tmp_path / "catalog.yaml"
+        yaml_file.write_text(yaml_content)
+
+        catalog = Catalog.from_yaml(yaml_file)
+        entry = catalog.get("eurusd_vol")
+
+        assert entry.params == {"tenor": "3m", "deltaStrike": "DN", "location": "NYC"}
+
+    def test_from_yaml_without_params(self, tmp_path: Path) -> None:
+        """Catalog.from_yaml works without params field."""
+        yaml_content = """
+- my_name: test_series
+  source: bloomberg
+  symbol: SPX Index
+  field: PX_LAST
+"""
+        yaml_file = tmp_path / "catalog.yaml"
+        yaml_file.write_text(yaml_content)
+
+        catalog = Catalog.from_yaml(yaml_file)
+        entry = catalog.get("test_series")
+
+        assert entry.params is None
+
+
+class TestCatalogCsvParams:
+    """Tests for CSV parsing - params not supported."""
+
+    def test_from_csv_params_not_supported(self, tmp_path: Path) -> None:
+        """Catalog.from_csv ignores params (YAML-only feature)."""
+        csv_content = """my_name,source,symbol,field,path,description,unit
+test_series,bloomberg,SPX Index,PX_LAST,,,
+"""
+        csv_file = tmp_path / "catalog.csv"
+        csv_file.write_text(csv_content)
+
+        catalog = Catalog.from_csv(csv_file)
+        entry = catalog.get("test_series")
+
+        # params is always None from CSV
+        assert entry.params is None
+
+
+class TestCatalogExportParams:
+    """Tests for catalog export with params."""
+
+    def test_to_yaml_includes_params(self, tmp_path: Path) -> None:
+        """Catalog.to_yaml exports params field."""
+        # Create catalog with params
+        yaml_content = """
+- my_name: test_series
+  source: gsquant
+  symbol: EURUSD
+  field: FXIMPLIEDVOL::impliedVolatility
+  params:
+    tenor: 3m
+    location: NYC
+"""
+        yaml_file = tmp_path / "input.yaml"
+        yaml_file.write_text(yaml_content)
+
+        catalog = Catalog.from_yaml(yaml_file)
+
+        # Export to new file
+        output_file = tmp_path / "output.yaml"
+        catalog.to_yaml(output_file)
+
+        # Re-load and verify params preserved
+        reloaded = Catalog.from_yaml(output_file)
+        entry = reloaded.get("test_series")
+
+        assert entry.params == {"tenor": "3m", "location": "NYC"}
+
+
 def test_catalog_entry_required_fields() -> None:
     """CatalogEntry requires my_name, source, symbol."""
     entry = CatalogEntry(

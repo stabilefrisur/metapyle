@@ -151,6 +151,7 @@ class Client:
                         symbol=e.symbol,
                         field=e.field,
                         path=e.path,
+                        params=e.params,
                     )
                     for e in group_entries
                 ]

@@ -30,11 +30,14 @@ class TestGSQuantSourceImport:
 
     def test_gsquant_not_installed(self) -> None:
         """GSQuantSource raises FetchError when gs-quant not installed."""
-        with patch.dict("sys.modules", {"gs_quant": None, "gs_quant.data": None, "gs_quant.session": None}):
+        with patch.dict(
+            "sys.modules", {"gs_quant": None, "gs_quant.data": None, "gs_quant.session": None}
+        ):
             # Force reimport
             import importlib
 
             from metapyle.sources import gsquant
+
             importlib.reload(gsquant)
 
             # Reset the lazy import state
@@ -99,11 +102,13 @@ class TestGSQuantFetch:
 
         # Mock the gs_quant modules
         mock_dataset_instance = MagicMock()
-        mock_dataset_instance.get_data.return_value = pd.DataFrame({
-            "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
-            "bbid": ["EURUSD", "EURUSD"],
-            "impliedVolatility": [0.08, 0.085],
-        })
+        mock_dataset_instance.get_data.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
+                "bbid": ["EURUSD", "EURUSD"],
+                "impliedVolatility": [0.08, 0.085],
+            }
+        )
 
         mock_dataset_class = MagicMock(return_value=mock_dataset_instance)
 
@@ -128,11 +133,13 @@ class TestGSQuantFetch:
         from metapyle.sources.gsquant import GSQuantSource
 
         mock_dataset_instance = MagicMock()
-        mock_dataset_instance.get_data.return_value = pd.DataFrame({
-            "date": pd.to_datetime(["2024-01-01"]),
-            "bbid": ["EURUSD"],
-            "impliedVolatility": [0.08],
-        })
+        mock_dataset_instance.get_data.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01"]),
+                "bbid": ["EURUSD"],
+                "impliedVolatility": [0.08],
+            }
+        )
 
         mock_dataset_class = MagicMock(return_value=mock_dataset_instance)
 
@@ -163,11 +170,13 @@ class TestGSQuantFetchBatch:
         from metapyle.sources.gsquant import GSQuantSource
 
         mock_dataset_instance = MagicMock()
-        mock_dataset_instance.get_data.return_value = pd.DataFrame({
-            "date": pd.to_datetime(["2024-01-01", "2024-01-01", "2024-01-02", "2024-01-02"]),
-            "bbid": ["EURUSD", "USDJPY", "EURUSD", "USDJPY"],
-            "impliedVolatility": [0.08, 0.10, 0.085, 0.105],
-        })
+        mock_dataset_instance.get_data.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01", "2024-01-01", "2024-01-02", "2024-01-02"]),
+                "bbid": ["EURUSD", "USDJPY", "EURUSD", "USDJPY"],
+                "impliedVolatility": [0.08, 0.10, 0.085, 0.105],
+            }
+        )
 
         mock_dataset_class = MagicMock(return_value=mock_dataset_instance)
 
@@ -198,20 +207,25 @@ class TestGSQuantFetchBatch:
 
         def create_mock_data(dataset_id: str) -> pd.DataFrame:
             if dataset_id == "FXIMPLIEDVOL":
-                return pd.DataFrame({
-                    "date": pd.to_datetime(["2024-01-01"]),
-                    "bbid": ["EURUSD"],
-                    "impliedVolatility": [0.08],
-                })
+                return pd.DataFrame(
+                    {
+                        "date": pd.to_datetime(["2024-01-01"]),
+                        "bbid": ["EURUSD"],
+                        "impliedVolatility": [0.08],
+                    }
+                )
             else:  # FXSPOT
-                return pd.DataFrame({
-                    "date": pd.to_datetime(["2024-01-01"]),
-                    "bbid": ["EURUSD"],
-                    "spot": [1.10],
-                })
+                return pd.DataFrame(
+                    {
+                        "date": pd.to_datetime(["2024-01-01"]),
+                        "bbid": ["EURUSD"],
+                        "spot": [1.10],
+                    }
+                )
 
         # Use separate mock instances per dataset
         mock_instances: dict[str, MagicMock] = {}
+
         def create_dataset(dataset_id: str) -> MagicMock:
             if dataset_id not in mock_instances:
                 instance = MagicMock()

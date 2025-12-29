@@ -37,9 +37,7 @@ def _parse_field(field: str) -> tuple[str, str]:
         If field format is invalid.
     """
     if "::" not in field:
-        raise ValueError(
-            f"Invalid field format: '{field}'. Expected 'dataset_id::value_column'"
-        )
+        raise ValueError(f"Invalid field format: '{field}'. Expected 'dataset_id::value_column'")
 
     parts = field.split("::", 1)
     dataset_id, value_column = parts[0], parts[1]
@@ -190,10 +188,7 @@ class GSQuantSource(BaseSource):
             # Rename columns to include field for uniqueness across datasets
             # Build a mapping from symbol to full column name
             field_str = f"{dataset_id}::{value_column}"
-            rename_map = {
-                symbol: make_column_name(symbol, field_str)
-                for symbol in pivoted.columns
-            }
+            rename_map = {symbol: make_column_name(symbol, field_str) for symbol in pivoted.columns}
             pivoted = pivoted.rename(columns=rename_map)
 
             result_dfs.append(pivoted)

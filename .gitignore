@@ -38,5 +38,7 @@ TODO.md
 # GitHub Copilot (local development aids)
 .github/skills/*
 !.github/skills/adding-api-sources/
+!.github/skills/upstream-tarballs/
 .github/agents/*
 !.github/agents/adding-api-sources.agent.md
+!.github/agents/upstream-tarballs.agent.md

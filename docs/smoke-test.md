@@ -31,9 +31,9 @@ from pathlib import Path
 
 from metapyle import Client
 
-# Calculate date range: last 30 days
+# Calculate date range: last 3 years (for low-frequency series)
 end = datetime.now().strftime("%Y-%m-%d")
-start = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+start = (datetime.now() - timedelta(days=3 * 365)).strftime("%Y-%m-%d")
 
 
 def test_source(name: str, catalog_yaml: str) -> None:
@@ -47,6 +47,10 @@ def test_source(name: str, catalog_yaml: str) -> None:
         assert not df.empty, "DataFrame is empty"
         assert len(df.columns) == 1, f"Expected 1 column, got {len(df.columns)}"
         print(f"✓ {name}: {len(df)} rows")
+        print(df.head(3).to_string())
+        print("...")
+        print(df.tail(3).to_string())
+        print()
     finally:
         catalog_path.unlink()
 
@@ -74,7 +78,7 @@ print("=" * 50)
 # test_source("macrobond", """
 # - my_name: macrobond
 #   source: macrobond
-#   symbol: usgdp
+#   symbol: usnaac0169
 # """)
 
 
@@ -119,10 +123,30 @@ print("Smoke test complete")
 ### Success Output
 
 ```
-Testing metapyle connections (2024-12-01 to 2024-12-29)
+Testing metapyle connections (2021-12-29 to 2024-12-29)
 ==================================================
-✓ bloomberg: 20 rows
-✓ macrobond: 1 rows
+✓ bloomberg: 756 rows
+            bloomberg
+2021-12-29    4778.73
+2021-12-30    4778.73
+2021-12-31    4766.18
+...
+            bloomberg
+2024-12-26    5974.65
+2024-12-27    5970.84
+2024-12-29    5906.94
+
+✓ macrobond: 12 rows
+            macrobond
+2022-03-31      24740
+2022-06-30      25249
+2022-09-30      25724
+...
+            macrobond
+2024-03-31      28278
+2024-06-30      28631
+2024-09-30      29349
+
 ==================================================
 Smoke test complete
 ```

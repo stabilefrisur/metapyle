@@ -69,6 +69,7 @@ Now your analysis code uses `sp500_close` everywhere. If the underlying source c
 | Source | Description | Status |
 |--------|-------------|--------|
 | `bloomberg` | Bloomberg Terminal via xbbg | Available |
+| `gsquant` | GS Marquee via gs-quant | Available |
 | `macrobond` | Macrobond via macrobond-data-api | Available |
 | `localfile` | CSV and Parquet files | Available |
 
@@ -80,9 +81,16 @@ Now your analysis code uses `sp500_close` everywhere. If the underlying source c
 
 - Python 3.12 or higher
 - Bloomberg Terminal running on your machine, OR access to Bloomberg Server API (B-PIPE)
+- GS Quant session authenticated (requires GS Marquee access)
 - Macrobond desktop application installed (uses COM interface), OR Macrobond Web API credentials configured
 
 ### Installation
+
+```bash
+uv add metapyle
+```
+
+Or with pip:
 
 ```bash
 pip install metapyle
@@ -99,7 +107,7 @@ print("metapyle installed successfully")
 
 After installing metapyle, run integration tests to verify your data source connections work correctly.
 
-**All integration tests** (requires both Bloomberg and Macrobond):
+**All integration tests** (requires Bloomberg, GS Quant, and Macrobond):
 
 ```bash
 pytest -m integration
@@ -110,6 +118,9 @@ pytest -m integration
 ```bash
 # Bloomberg only
 pytest -m bloomberg
+
+# GS Quant only
+pytest -m gsquant
 
 # Macrobond only
 pytest -m macrobond
@@ -212,8 +223,11 @@ The catalog is a YAML file that maps human-readable names to source-specific det
 | `symbol` | Yes | Source-specific identifier (column name for `localfile`) |
 | `field` | No | Source-specific field (e.g., `PX_LAST` for Bloomberg) |
 | `path` | No | File path for `localfile` source |
+| `params` | No | Source-specific parameters as key-value pairs (e.g., `tenor`, `deltaStrike` for gs-quant) |
 | `description` | No | Human-readable description |
 | `unit` | No | Unit of measurement |
+
+The `params` field passes additional query parameters to the data source API. This is useful for sources like gs-quant that require extra filters beyond symbol and field.
 
 ### Naming Convention
 
@@ -673,6 +687,28 @@ Fetches data from Bloomberg Terminal via the `xbbg` library.
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
+```
+
+### GS Quant (`gsquant`)
+
+Fetches data from GS Marquee platform via the `gs-quant` library.
+
+**Requirements:**
+- `pip install metapyle[gsquant]`
+- GS Quant session authenticated (call `GsSession.use()` before fetching)
+
+**Symbol format:** Bloomberg ID (bbid) for the asset (e.g., `EURUSD`, `SPX`, `AAPL`)
+
+**Field format:** `dataset_id::value_column` (e.g., `FXIMPLIEDVOL::impliedVolatility`)
+
+```yaml
+- my_name: eurusd_vol
+  source: gsquant
+  symbol: EURUSD
+  field: FXIMPLIEDVOL::impliedVolatility
+  params:
+    tenor: 1m
+    deltaStrike: DN
 ```
 
 ### Macrobond (`macrobond`)

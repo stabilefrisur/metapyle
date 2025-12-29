@@ -14,7 +14,7 @@ Requires Python 3.12+
 
 Financial data lives in many places—Bloomberg terminals, internal APIs, CSV exports—each with its own ticker syntax, authentication, and quirks. Metapyle provides a YAML-based catalog that maps human-readable names to source-specific details, giving you a single `client.get()` interface regardless of where the data comes from.
 
-Currently supports Bloomberg (via xbbg), Macrobond (via macrobond-data-api), and local files (CSV/Parquet).
+Currently supports Bloomberg (via xbbg), GS Marquee (via gs-quant), Macrobond (via macrobond-data-api), and local files (CSV/Parquet).
 
 ## Installation
 
@@ -28,7 +28,7 @@ Or with pip:
 pip install metapyle
 ```
 
-> **Note:** Bloomberg requires a Bloomberg Terminal. Macrobond requires the desktop app or Web API credentials.
+> **Note:** Bloomberg requires a Bloomberg Terminal. GS Quant requires GS Marquee access. Macrobond requires the desktop app or Web API credentials.
 
 ## Quick Start
 
@@ -40,6 +40,15 @@ pip install metapyle
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
+
+# GS Quant
+- my_name: eurusd_vol
+  source: gsquant
+  symbol: EURUSD
+  field: FXIMPLIEDVOL::impliedVolatility
+  params:
+    tenor: 1m
+    deltaStrike: DN
 
 # Macrobond
 - my_name: us_gdp

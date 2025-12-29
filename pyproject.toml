@@ -19,14 +19,12 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "gs-quant>=1.4.67",
     "macrobond-data-api>=3.0.4",
     "pandas>=2.0.0",
     "pyyaml>=6.0",
     "xbbg>=0.10.0",
 ]
-
-[project.optional-dependencies]
-gsquant = ["gs-quant"]
 
 [project.urls]
 Homepage = "https://github.com/stabilefrisur/metapyle"

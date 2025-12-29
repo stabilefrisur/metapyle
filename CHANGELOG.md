@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GS Quant data source via gs-quant integration (optional dependency)
+  - Fetch data from GS Marquee platform using Bloomberg IDs (bbid)
+  - Field format `dataset_id::value_column` (e.g., `FXIMPLIEDVOL::impliedVolatility`)
+  - Support for `params` field to pass additional query parameters (tenor, deltaStrike, etc.)
+- `params` field in `CatalogEntry` for source-specific parameters
+- `params` field in `FetchRequest` for passing parameters to source adapters
+- Catalog CSV import/export tools:
+  - `Catalog.csv_template()` generates blank or source-specific CSV templates
+  - `Catalog.from_csv()` loads catalog entries from CSV files
+  - `Catalog.to_csv()` exports catalog to CSV format
+  - `Catalog.to_yaml()` exports catalog to YAML format
+- Integration test infrastructure with pytest markers (`integration`, `bloomberg`, `macrobond`, `gsquant`)
+- `--run-private` pytest flag for tests using private/in-house series
+
+### Fixed
+
+- Skip integration tests gracefully when services unavailable
+
+## [0.1.1] - 2025-12-28
+
+### Added
+
 - Macrobond data source via macrobond-data-api integration (optional dependency)
   - `fetch()` with raw mode using `get_one_series`
   - `fetch()` with unified mode using `get_unified_series` for frequency/currency alignment
@@ -44,5 +66,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive type hints throughout (Python 3.12+)
 - User guide documentation
 
-[Unreleased]: https://github.com/stabilefrisur/metapyle/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/stabilefrisur/metapyle/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/stabilefrisur/metapyle/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/stabilefrisur/metapyle/releases/tag/v0.1.0

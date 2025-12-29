@@ -103,9 +103,17 @@ from metapyle import Client
 print("metapyle installed successfully")
 ```
 
-### Running Integration Tests (For Developers)
+### Verifying Data Source Connections
 
-**Note:** Integration tests are only available in the source repository, not in the installed package. If you want to run tests, clone the repository first:
+#### Quick Smoke Test
+
+For quick verification that your data sources are working, use the [smoke test script](smoke-test.md). Copy the script, uncomment the sources you have access to, and run it.
+
+#### Full Integration Tests
+
+The full test suite is available for developers who want comprehensive testing.
+
+**From GitHub (recommended):**
 
 ```bash
 git clone https://github.com/stabilefrisur/metapyle.git
@@ -113,24 +121,24 @@ cd metapyle
 uv sync --group dev  # or: pip install -e ".[dev]"
 ```
 
-Once you have the source repository, you can verify your data source connections:
-
-**All integration tests** (requires Bloomberg, Macrobond, and GS Quant):
+**From PyPI source distribution** (if GitHub is not accessible):
 
 ```bash
-pytest -m integration
+pip download metapyle --no-binary :all:
+tar -xzf metapyle-*.tar.gz
+cd metapyle-*
+pip install -e ".[dev]"  # or: uv sync --group dev
 ```
 
-**Single source only:**
+Once you have the source, run tests by source:
 
 ```bash
-# Bloomberg only
+# All integration tests (requires all sources)
+pytest -m integration
+
+# Single source only
 pytest -m bloomberg
-
-# GS Quant only
 pytest -m gsquant
-
-# Macrobond only
 pytest -m macrobond
 ```
 

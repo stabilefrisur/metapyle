@@ -362,7 +362,7 @@ class Catalog:
 
         entries_list = []
         for entry in self._entries.values():
-            entry_dict: dict[str, str] = {
+            entry_dict: dict[str, Any] = {
                 "my_name": entry.my_name,
                 "source": entry.source,
                 "symbol": entry.symbol,
@@ -376,6 +376,8 @@ class Catalog:
                 entry_dict["description"] = entry.description
             if entry.unit is not None:
                 entry_dict["unit"] = entry.unit
+            if entry.params is not None:
+                entry_dict["params"] = entry.params
 
             entries_list.append(entry_dict)
 

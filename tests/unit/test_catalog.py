@@ -99,6 +99,37 @@ test_series,bloomberg,SPX Index,PX_LAST,,,
         assert entry.params is None
 
 
+class TestCatalogExportParams:
+    """Tests for catalog export with params."""
+
+    def test_to_yaml_includes_params(self, tmp_path: Path) -> None:
+        """Catalog.to_yaml exports params field."""
+        # Create catalog with params
+        yaml_content = """
+- my_name: test_series
+  source: gsquant
+  symbol: EURUSD
+  field: FXIMPLIEDVOL::impliedVolatility
+  params:
+    tenor: 3m
+    location: NYC
+"""
+        yaml_file = tmp_path / "input.yaml"
+        yaml_file.write_text(yaml_content)
+
+        catalog = Catalog.from_yaml(yaml_file)
+
+        # Export to new file
+        output_file = tmp_path / "output.yaml"
+        catalog.to_yaml(output_file)
+
+        # Re-load and verify params preserved
+        reloaded = Catalog.from_yaml(output_file)
+        entry = reloaded.get("test_series")
+
+        assert entry.params == {"tenor": "3m", "location": "NYC"}
+
+
 def test_catalog_entry_required_fields() -> None:
     """CatalogEntry requires my_name, source, symbol."""
     entry = CatalogEntry(

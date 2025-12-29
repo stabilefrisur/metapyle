@@ -64,7 +64,7 @@ print("=" * 50)
 # Requires: Bloomberg Terminal running or B-PIPE access
 #
 # test_source("bloomberg", """
-# - my_name: spx_ind_bb
+# - my_name: bloomberg
 #   source: bloomberg
 #   symbol: SPX Index
 #   field: PX_LAST
@@ -76,7 +76,7 @@ print("=" * 50)
 # Requires: Macrobond desktop app or Web API credentials
 #
 # test_source("macrobond", """
-# - my_name: us_gdp_mb
+# - my_name: macrobond
 #   source: macrobond
 #   symbol: usnaac0169
 # """)
@@ -90,7 +90,7 @@ print("=" * 50)
 # GsSession.use(Environment.PROD, client_id="YOUR_ID", client_secret="YOUR_SECRET")
 #
 # test_source("gsquant", """
-# - my_name: spx_ivol_gs
+# - my_name: gsquant
 #   source: gsquant
 #   symbol: SPX
 #   field: SWAPTION_VOL::atmVol
@@ -105,7 +105,7 @@ print("=" * 50)
 # Edit the path and symbol (column name) to match your file
 #
 # test_source("localfile", """
-# - my_name: your_col
+# - my_name: localfile
 #   source: localfile
 #   symbol: YOUR_COLUMN_NAME
 #   path: /path/to/your/file.csv

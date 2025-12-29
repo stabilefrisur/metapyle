@@ -9,11 +9,12 @@ from metapyle import Client
 # Fixture paths
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 BLOOMBERG_CATALOG = FIXTURES_DIR / "bloomberg.yaml"
+GSQUANT_CATALOG = FIXTURES_DIR / "gsquant.yaml"
 MACROBOND_CATALOG = FIXTURES_DIR / "macrobond.yaml"
 COMBINED_CATALOG = FIXTURES_DIR / "combined.yaml"
 
 # Test date range (guaranteed to have data)
-TEST_START = "2024-01-01"
+TEST_START = "2023-01-01"
 TEST_END = "2024-06-30"
 
 
@@ -83,6 +84,12 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 def bloomberg_client() -> Client:
     """Client configured with Bloomberg catalog."""
     return Client(catalog=str(BLOOMBERG_CATALOG), cache_enabled=False)
+
+
+@pytest.fixture
+def gsquant_client() -> Client:
+    """Client configured with gs-quant catalog."""
+    return Client(catalog=str(GSQUANT_CATALOG), cache_enabled=False)
 
 
 @pytest.fixture

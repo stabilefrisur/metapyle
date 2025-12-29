@@ -51,6 +51,8 @@ class CatalogEntry:
         Human-readable description of the data series.
     unit : str | None, optional
         Unit of measurement (e.g., "USD billions", "points").
+    params : dict[str, Any] | None, optional
+        Additional source-specific parameters (e.g., tenor, deltaStrike for gs-quant).
     """
 
     my_name: str
@@ -60,6 +62,7 @@ class CatalogEntry:
     path: str | None = None
     description: str | None = None
     unit: str | None = None
+    params: dict[str, Any] | None = None
 
 
 class Catalog:

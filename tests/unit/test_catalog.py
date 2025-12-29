@@ -14,6 +14,33 @@ from metapyle.exceptions import (
 from metapyle.sources.base import SourceRegistry
 
 
+class TestCatalogEntryParams:
+    """Tests for CatalogEntry params field."""
+
+    def test_catalog_entry_with_params(self) -> None:
+        """CatalogEntry accepts params dict."""
+        params = {"tenor": "3m", "location": "NYC"}
+        entry = CatalogEntry(
+            my_name="eurusd_vol",
+            source="gsquant",
+            symbol="EURUSD",
+            field="FXIMPLIEDVOL::impliedVolatility",
+            params=params,
+        )
+
+        assert entry.params == params
+
+    def test_catalog_entry_params_default_none(self) -> None:
+        """CatalogEntry params defaults to None."""
+        entry = CatalogEntry(
+            my_name="test",
+            source="bloomberg",
+            symbol="SPX Index",
+        )
+
+        assert entry.params is None
+
+
 def test_catalog_entry_required_fields() -> None:
     """CatalogEntry requires my_name, source, symbol."""
     entry = CatalogEntry(

@@ -17,6 +17,41 @@ _GSQUANT_AVAILABLE: bool | None = None
 _gsquant_modules: dict[str, Any] = {}
 
 
+def _parse_field(field: str) -> tuple[str, str]:
+    """
+    Parse field into dataset_id and value_column.
+
+    Parameters
+    ----------
+    field : str
+        Field in format "dataset_id::value_column".
+
+    Returns
+    -------
+    tuple[str, str]
+        (dataset_id, value_column)
+
+    Raises
+    ------
+    ValueError
+        If field format is invalid.
+    """
+    if "::" not in field:
+        raise ValueError(
+            f"Invalid field format: '{field}'. Expected 'dataset_id::value_column'"
+        )
+
+    parts = field.split("::", 1)
+    dataset_id, value_column = parts[0], parts[1]
+
+    if not dataset_id or not value_column:
+        raise ValueError(
+            f"Invalid field format: '{field}'. Both dataset_id and value_column required"
+        )
+
+    return dataset_id, value_column
+
+
 def _get_gsquant() -> dict[str, Any]:
     """Lazy import of gs_quant modules."""
     global _GSQUANT_AVAILABLE, _gsquant_modules

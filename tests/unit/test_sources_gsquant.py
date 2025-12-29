@@ -48,3 +48,42 @@ class TestGSQuantSourceImport:
 
             with pytest.raises(FetchError, match="gs-quant package is not installed"):
                 source.fetch([request], "2024-01-01", "2024-12-31")
+
+
+class TestFieldParsing:
+    """Tests for field parsing."""
+
+    def test_parse_field_valid(self) -> None:
+        """_parse_field extracts dataset_id and value_column."""
+        from metapyle.sources.gsquant import _parse_field
+
+        dataset_id, value_column = _parse_field("FXIMPLIEDVOL::impliedVolatility")
+
+        assert dataset_id == "FXIMPLIEDVOL"
+        assert value_column == "impliedVolatility"
+
+    def test_parse_field_with_underscores(self) -> None:
+        """_parse_field handles underscores in names."""
+        from metapyle.sources.gsquant import _parse_field
+
+        dataset_id, value_column = _parse_field("S3_PARTNERS_EQUITY::dailyShortInterest")
+
+        assert dataset_id == "S3_PARTNERS_EQUITY"
+        assert value_column == "dailyShortInterest"
+
+    def test_parse_field_missing_separator(self) -> None:
+        """_parse_field raises ValueError if :: missing."""
+        from metapyle.sources.gsquant import _parse_field
+
+        with pytest.raises(ValueError, match="Invalid field format"):
+            _parse_field("FXIMPLIEDVOL")
+
+    def test_parse_field_empty_parts(self) -> None:
+        """_parse_field raises ValueError if parts empty."""
+        from metapyle.sources.gsquant import _parse_field
+
+        with pytest.raises(ValueError, match="Invalid field format"):
+            _parse_field("::impliedVolatility")
+
+        with pytest.raises(ValueError, match="Invalid field format"):
+            _parse_field("FXIMPLIEDVOL::")

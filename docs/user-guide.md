@@ -69,8 +69,8 @@ Now your analysis code uses `sp500_close` everywhere. If the underlying source c
 | Source | Description | Status |
 |--------|-------------|--------|
 | `bloomberg` | Bloomberg Terminal via xbbg | Available |
-| `gsquant` | GS Marquee via gs-quant | Available |
 | `macrobond` | Macrobond via macrobond-data-api | Available |
+| `gsquant` | GS Marquee via gs-quant | Available |
 | `localfile` | CSV and Parquet files | Available |
 
 ---
@@ -81,8 +81,8 @@ Now your analysis code uses `sp500_close` everywhere. If the underlying source c
 
 - Python 3.12 or higher
 - Bloomberg Terminal running on your machine, OR access to Bloomberg Server API (B-PIPE)
-- GS Quant session authenticated (requires GS Marquee access)
 - Macrobond desktop application installed (uses COM interface), OR Macrobond Web API credentials configured
+- GS Quant session authenticated (requires GS Marquee access)
 
 ### Installation
 
@@ -107,7 +107,7 @@ print("metapyle installed successfully")
 
 After installing metapyle, run integration tests to verify your data source connections work correctly.
 
-**All integration tests** (requires Bloomberg, GS Quant, and Macrobond):
+**All integration tests** (requires Bloomberg, Macrobond, and GS Quant):
 
 ```bash
 pytest -m integration
@@ -689,28 +689,6 @@ Fetches data from Bloomberg Terminal via the `xbbg` library.
   field: PX_LAST
 ```
 
-### GS Quant (`gsquant`)
-
-Fetches data from GS Marquee platform via the `gs-quant` library.
-
-**Requirements:**
-- `pip install metapyle[gsquant]`
-- GS Quant session authenticated (call `GsSession.use()` before fetching)
-
-**Symbol format:** Bloomberg ID (bbid) for the asset (e.g., `EURUSD`, `SPX`, `AAPL`)
-
-**Field format:** `dataset_id::value_column` (e.g., `FXIMPLIEDVOL::impliedVolatility`)
-
-```yaml
-- my_name: eurusd_vol
-  source: gsquant
-  symbol: EURUSD
-  field: FXIMPLIEDVOL::impliedVolatility
-  params:
-    tenor: 1m
-    deltaStrike: DN
-```
-
 ### Macrobond (`macrobond`)
 
 Fetches data from Macrobond via the `macrobond-data-api` library.
@@ -744,6 +722,28 @@ df = client.get_raw(
     frequency="Monthly",
     currency="EUR"
 )
+```
+
+### GS Quant (`gsquant`)
+
+Fetches data from GS Marquee platform via the `gs-quant` library.
+
+**Requirements:**
+- `pip install metapyle[gsquant]`
+- GS Quant session authenticated (call `GsSession.use()` before fetching)
+
+**Symbol format:** Bloomberg ID (bbid) for the asset (e.g., `EURUSD`, `SPX`, `AAPL`)
+
+**Field format:** `dataset_id::value_column` (e.g., `FXIMPLIEDVOL::impliedVolatility`)
+
+```yaml
+- my_name: eurusd_vol
+  source: gsquant
+  symbol: EURUSD
+  field: FXIMPLIEDVOL::impliedVolatility
+  params:
+    tenor: 1m
+    deltaStrike: DN
 ```
 
 ### Local File (`localfile`)

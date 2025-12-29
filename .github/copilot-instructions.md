@@ -334,6 +334,7 @@ class FetchRequest:
     symbol: str              # required
     field: str | None = None # optional (e.g., Bloomberg field)
     path: str | None = None  # optional (e.g., localfile path)
+    params: dict[str, Any] | None = None  # optional (e.g., gsquant API params)
 ```
 
 **make_column_name()** ensures consistent naming:
@@ -363,10 +364,11 @@ class CatalogEntry:
     my_name: str                    # required
     source: str                     # required
     symbol: str                     # required
-    field: str | None = None        # optional (e.g., Bloomberg field)
+    field: str | None = None        # optional (e.g., Bloomberg field, gsquant dataset::column)
     path: str | None = None         # optional (e.g., localfile path)
     description: str | None = None  # optional
     unit: str | None = None         # optional
+    params: dict[str, Any] | None = None  # optional (e.g., gsquant API params)
 ```
 
 ### Catalog CSV Import/Export

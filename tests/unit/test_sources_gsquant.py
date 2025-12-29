@@ -8,6 +8,22 @@ from metapyle.exceptions import FetchError
 from metapyle.sources.base import FetchRequest
 
 
+class TestGSQuantSourceRegistration:
+    """Tests for GSQuantSource registration."""
+
+    def test_gsquant_registered(self) -> None:
+        """GSQuantSource is registered in global registry."""
+        from metapyle.sources.base import _global_registry
+
+        assert "gsquant" in _global_registry.list_sources()
+
+    def test_gsquant_importable_from_sources(self) -> None:
+        """GSQuantSource is importable from metapyle.sources."""
+        from metapyle.sources import GSQuantSource
+
+        assert GSQuantSource is not None
+
+
 class TestGSQuantSourceImport:
     """Tests for GSQuantSource lazy import."""
 

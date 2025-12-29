@@ -673,3 +673,84 @@ def test_client_get_raw_bloomberg_returns_symbol_field(
 
     assert "SPX Index::PX_LAST" in df.columns  # Double colon separator
     client.close()
+
+
+# ============================================================================
+# Client Params Tests
+# ============================================================================
+
+
+# Track params received by mock source
+_captured_requests: list[FetchRequest] = []
+
+
+@register_source("mock_with_params")
+class MockSourceWithParams(BaseSource):
+    """Mock source that captures params from FetchRequest."""
+
+    def fetch(
+        self,
+        requests: Sequence[FetchRequest],
+        start: str,
+        end: str,
+    ) -> pd.DataFrame:
+        """Capture requests and return mock data."""
+        _captured_requests.clear()
+        _captured_requests.extend(requests)
+
+        dates = pd.date_range(start, end, freq="D")
+        result = pd.DataFrame(index=dates)
+        for req in requests:
+            result[req.symbol] = list(range(len(dates)))
+        return result
+
+    def get_metadata(self, symbol: str) -> dict[str, Any]:
+        """Return mock metadata."""
+        return {"symbol": symbol}
+
+
+class TestClientParams:
+    """Tests for Client passing params to source."""
+
+    def test_get_passes_params_to_fetch_request(self, tmp_path: Path) -> None:
+        """Client passes catalog params to FetchRequest."""
+        # Create catalog with params
+        yaml_content = """
+- my_name: test_series
+  source: mock_with_params
+  symbol: TEST
+  params:
+    tenor: 3m
+    location: NYC
+"""
+        yaml_file = tmp_path / "catalog.yaml"
+        yaml_file.write_text(yaml_content)
+
+        client = Client(catalog=yaml_file, cache_enabled=False)
+        client.get(["test_series"], start="2024-01-01", end="2024-01-02")
+
+        # Verify fetch was called with params
+        assert len(_captured_requests) == 1
+        assert _captured_requests[0].params == {"tenor": "3m", "location": "NYC"}
+
+        client.close()
+
+    def test_get_passes_none_params_when_not_specified(self, tmp_path: Path) -> None:
+        """Client passes None for params when not specified in catalog."""
+        # Create catalog without params
+        yaml_content = """
+- my_name: test_series_no_params
+  source: mock_with_params
+  symbol: TEST_NO_PARAMS
+"""
+        yaml_file = tmp_path / "catalog.yaml"
+        yaml_file.write_text(yaml_content)
+
+        client = Client(catalog=yaml_file, cache_enabled=False)
+        client.get(["test_series_no_params"], start="2024-01-01", end="2024-01-02")
+
+        # Verify fetch was called with params=None
+        assert len(_captured_requests) == 1
+        assert _captured_requests[0].params is None
+
+        client.close()

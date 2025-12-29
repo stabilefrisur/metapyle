@@ -39,6 +39,8 @@ TODO.md
 .github/skills/*
 !.github/skills/adding-api-sources/
 !.github/skills/upstream-tarballs/
+!.github/skills/making-git-commits/
+!.github/skills/writing-changelogs/
 .github/agents/*
 !.github/agents/adding-api-sources.agent.md
 !.github/agents/upstream-tarballs.agent.md

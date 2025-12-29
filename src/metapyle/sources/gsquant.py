@@ -214,10 +214,17 @@ class GSQuantSource(BaseSource):
         return result
 
     def get_metadata(self, symbol: str) -> dict[str, Any]:
-        """Retrieve metadata for a gs-quant symbol."""
-        _get_gsquant()
-        return {
-            "source": "gsquant",
-            "symbol": symbol,
-            "gsquant_available": _GSQUANT_AVAILABLE or False,
-        }
+        """
+        Return metadata for a symbol.
+
+        Parameters
+        ----------
+        symbol : str
+            Symbol to retrieve metadata for.
+
+        Returns
+        -------
+        dict[str, Any]
+            Empty dict (gs-quant metadata requires session and is complex).
+        """
+        return {}

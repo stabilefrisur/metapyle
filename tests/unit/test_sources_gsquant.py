@@ -330,3 +330,19 @@ class TestGSQuantFetchErrors:
 
             assert isinstance(df, pd.DataFrame)
             assert df.empty
+
+
+class TestGSQuantMetadata:
+    """Tests for GSQuantSource.get_metadata."""
+
+    def test_get_metadata_returns_empty_dict(self) -> None:
+        """get_metadata returns empty dict (minimal implementation)."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": MagicMock(), "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            result = source.get_metadata("EURUSD")
+
+            assert result == {}

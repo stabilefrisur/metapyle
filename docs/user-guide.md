@@ -103,9 +103,17 @@ from metapyle import Client
 print("metapyle installed successfully")
 ```
 
-### Running Integration Tests
+### Running Integration Tests (For Developers)
 
-After installing metapyle, run integration tests to verify your data source connections work correctly.
+**Note:** Integration tests are only available in the source repository, not in the installed package. If you want to run tests, clone the repository first:
+
+```bash
+git clone https://github.com/stabilefrisur/metapyle.git
+cd metapyle
+uv sync --group dev  # or: pip install -e ".[dev]"
+```
+
+Once you have the source repository, you can verify your data source connections:
 
 **All integration tests** (requires Bloomberg, Macrobond, and GS Quant):
 

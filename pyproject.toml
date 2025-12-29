@@ -23,7 +23,7 @@ dependencies = [
     "macrobond-data-api>=3.0.4",
     "pandas>=2.0.0",
     "pyyaml>=6.0",
-    "xbbg>=0.10.0",
+    "xbbg==0.7.10",
 ]
 
 [project.urls]

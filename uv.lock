@@ -694,7 +694,7 @@ requires-dist = [
     { name = "macrobond-data-api", specifier = ">=3.0.4" },
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "xbbg", specifier = ">=0.10.0" },
+    { name = "xbbg", specifier = "==0.7.10" },
 ]
 
 [package.metadata.requires-dev]
@@ -1144,15 +1144,6 @@ wheels = [
 ]
 
 [[package]]
-name = "python-stdnum"
-version = "2.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/83/60/fd8299c7d8990a7d802286ac604862387bcac3df08be7cb1c932c33ef7da/python_stdnum-2.1.tar.gz", hash = "sha256:6b01645969eb3dfd55061a0114d593753cd9e653cea9083198b7eea12644397a", size = 1238596, upload-time = "2025-05-17T13:18:43.506Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/04/730f619b5b8470adf0e029ee2f0a060689145ea64dec001c8bac3c3959e2/python_stdnum-2.1-py3-none-any.whl", hash = "sha256:25eabcf5f307dd4150fd8f1c03f4512a6caeb84c9f09be1448711f5803373c58", size = 1120175, upload-time = "2025-05-17T13:18:41.193Z" },
-]
-
-[[package]]
 name = "pytz"
 version = "2025.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1542,7 +1533,7 @@ wheels = [
 
 [[package]]
 name = "xbbg"
-version = "0.10.0"
+version = "0.7.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
@@ -1550,13 +1541,12 @@ dependencies = [
     { name = "pandas-market-calendars" },
     { name = "pyarrow" },
     { name = "pytest" },
-    { name = "python-stdnum" },
     { name = "pytz" },
     { name = "ruamel-yaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/48/b6/61d7066bc589c564da9ad55f06cf30825e43d0a859f7dddbcf7247bcb352/xbbg-0.10.0.tar.gz", hash = "sha256:a71dcf1561578f0c106298c613efe210706ba131901642bb0143fc61f94304b9", size = 1371043, upload-time = "2025-12-25T20:46:52.047Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ec/45/e40b255a1d7d696b61aa0bed497f84497fd8e80d7728e8ed3e433f0c3767/xbbg-0.7.10.tar.gz", hash = "sha256:1f4b48b0fee9568c4673e0de4fa881f75928f6fdc49f3ce9aad26b6d1b100cba", size = 392649, upload-time = "2025-11-07T14:49:30.801Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/ad/4f164d9fc4f20388df8b4c5d92f68ad46cc1d4ffa38cbb6c205d4d385e6e/xbbg-0.10.0-py3-none-any.whl", hash = "sha256:2681e9eca37136da574f91aa5c205d3b7d4acb701f6033ee3521e6f1c60e30e2", size = 144232, upload-time = "2025-12-25T20:46:49.674Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/b2/62c148c7fb6ca18210c9608399cff08a888b773270cada5936322fc2b50c/xbbg-0.7.10-py3-none-any.whl", hash = "sha256:27d8ed34da58f2b4c04fbae30c577a56276ee8afcb8a0d631770c8696acda8a1", size = 82619, upload-time = "2025-11-07T14:49:28.278Z" },
 ]
 
 [[package]]

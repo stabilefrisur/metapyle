@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Smoke test script for quick data source connection verification
+
+### Changed
+
+- Include test suite in source distribution (sdist) for offline testing
+- Pin xbbg dependency to version 0.7.10 for compatibility
+
 ## [0.1.2] - 2025-12-29
 
 ### Added

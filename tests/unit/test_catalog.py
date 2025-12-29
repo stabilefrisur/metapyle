@@ -81,6 +81,24 @@ class TestCatalogYamlParams:
         assert entry.params is None
 
 
+class TestCatalogCsvParams:
+    """Tests for CSV parsing - params not supported."""
+
+    def test_from_csv_params_not_supported(self, tmp_path: Path) -> None:
+        """Catalog.from_csv ignores params (YAML-only feature)."""
+        csv_content = """my_name,source,symbol,field,path,description,unit
+test_series,bloomberg,SPX Index,PX_LAST,,,
+"""
+        csv_file = tmp_path / "catalog.csv"
+        csv_file.write_text(csv_content)
+
+        catalog = Catalog.from_csv(csv_file)
+        entry = catalog.get("test_series")
+
+        # params is always None from CSV
+        assert entry.params is None
+
+
 def test_catalog_entry_required_fields() -> None:
     """CatalogEntry requires my_name, source, symbol."""
     entry = CatalogEntry(

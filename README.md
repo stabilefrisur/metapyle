@@ -8,8 +8,6 @@
 
 A unified interface for querying financial time-series data from multiple sources.
 
-Requires Python 3.12+
-
 ## Overview
 
 Financial data lives in many places—Bloomberg terminals, internal APIs, CSV exports—each with its own ticker syntax, authentication, and quirks. Metapyle provides a YAML-based catalog that maps human-readable names to source-specific details, giving you a single `client.get()` interface regardless of where the data comes from.
@@ -82,6 +80,8 @@ See the [User Guide](docs/user-guide.md) for complete documentation, including:
 - Caching
 - Available data sources
 - Error handling
+
+For low-level API examples showing what metapyle abstracts, see [Raw API Examples](docs/raw-api-examples.md).
 
 ## License
 

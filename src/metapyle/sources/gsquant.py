@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 
 from metapyle.exceptions import FetchError, NoDataError
-from metapyle.sources.base import BaseSource, FetchRequest, register_source
+from metapyle.sources.base import BaseSource, FetchRequest, make_column_name, register_source
 
 __all__ = ["GSQuantSource"]
 
@@ -186,6 +186,15 @@ class GSQuantSource(BaseSource):
             # Ensure DatetimeIndex
             if not isinstance(pivoted.index, pd.DatetimeIndex):
                 pivoted.index = pd.to_datetime(pivoted.index)
+
+            # Rename columns to include field for uniqueness across datasets
+            # Build a mapping from symbol to full column name
+            field_str = f"{dataset_id}::{value_column}"
+            rename_map = {
+                symbol: make_column_name(symbol, field_str)
+                for symbol in pivoted.columns
+            }
+            pivoted = pivoted.rename(columns=rename_map)
 
             result_dfs.append(pivoted)
 

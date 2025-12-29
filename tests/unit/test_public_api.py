@@ -56,3 +56,24 @@ def test_version_available() -> None:
     parts = metapyle.__version__.split(".")
     assert len(parts) == 3  # Major.Minor.Patch
     assert all(part.isdigit() for part in parts)
+
+
+def test_sources_subpackage_exports() -> None:
+    """Source classes should be importable from metapyle.sources."""
+    from metapyle.sources import (
+        BaseSource,
+        FetchRequest,
+        GSQuantSource,
+        MacrobondSource,
+        SourceRegistry,
+        make_column_name,
+        register_source,
+    )
+
+    assert BaseSource is not None
+    assert FetchRequest is not None
+    assert GSQuantSource is not None
+    assert MacrobondSource is not None
+    assert SourceRegistry is not None
+    assert make_column_name is not None
+    assert register_source is not None

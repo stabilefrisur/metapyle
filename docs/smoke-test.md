@@ -35,6 +35,22 @@ from metapyle import Client
 end = datetime.now().strftime("%Y-%m-%d")
 start = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
+
+def test_source(name: str, catalog_yaml: str) -> None:
+    """Test a source using a temporary catalog file."""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write(catalog_yaml)
+        catalog_path = Path(f.name)
+    try:
+        with Client(catalog=catalog_path) as client:
+            df = client.get([name], start=start, end=end)
+        assert not df.empty, "DataFrame is empty"
+        assert len(df.columns) == 1, f"Expected 1 column, got {len(df.columns)}"
+        print(f"✓ {name}: {len(df)} rows")
+    finally:
+        catalog_path.unlink()
+
+
 print(f"Testing metapyle connections ({start} to {end})")
 print("=" * 50)
 
@@ -43,47 +59,23 @@ print("=" * 50)
 # Uncomment to test Bloomberg connection
 # Requires: Bloomberg Terminal running or B-PIPE access
 #
-# catalog_yaml = """
-# - my_name: test_bloomberg
+# test_source("bloomberg", """
+# - my_name: bloomberg
 #   source: bloomberg
 #   symbol: SPX Index
 #   field: PX_LAST
-# """
-# try:
-#     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-#         f.write(catalog_yaml)
-#         catalog_path = Path(f.name)
-#     with Client(catalog=catalog_path) as client:
-#         df = client.get(["test_bloomberg"], start=start, end=end)
-#     catalog_path.unlink()
-#     assert not df.empty, "DataFrame is empty"
-#     assert len(df.columns) == 1, f"Expected 1 column, got {len(df.columns)}"
-#     print(f"✓ Bloomberg: {len(df)} rows, column '{df.columns[0]}'")
-# except Exception as e:
-#     print(f"✗ Bloomberg: {e}")
+# """)
 
 
 # === MACROBOND ===
 # Uncomment to test Macrobond connection
 # Requires: Macrobond desktop app or Web API credentials
 #
-# catalog_yaml = """
-# - my_name: test_macrobond
+# test_source("macrobond", """
+# - my_name: macrobond
 #   source: macrobond
 #   symbol: usgdp
-# """
-# try:
-#     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-#         f.write(catalog_yaml)
-#         catalog_path = Path(f.name)
-#     with Client(catalog=catalog_path) as client:
-#         df = client.get(["test_macrobond"], start=start, end=end)
-#     catalog_path.unlink()
-#     assert not df.empty, "DataFrame is empty"
-#     assert len(df.columns) == 1, f"Expected 1 column, got {len(df.columns)}"
-#     print(f"✓ Macrobond: {len(df)} rows, column '{df.columns[0]}'")
-# except Exception as e:
-#     print(f"✗ Macrobond: {e}")
+# """)
 
 
 # === GS QUANT ===
@@ -93,51 +85,27 @@ print("=" * 50)
 # from gs_quant.session import GsSession, Environment
 # GsSession.use(Environment.PROD, client_id="YOUR_ID", client_secret="YOUR_SECRET")
 #
-# catalog_yaml = """
-# - my_name: test_gsquant
+# test_source("gsquant", """
+# - my_name: gsquant
 #   source: gsquant
 #   symbol: SPX
 #   field: SWAPTION_VOL::atmVol
 #   params:
 #     tenor: 1y
 #     expirationTenor: 1m
-# """
-# try:
-#     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-#         f.write(catalog_yaml)
-#         catalog_path = Path(f.name)
-#     with Client(catalog=catalog_path) as client:
-#         df = client.get(["test_gsquant"], start=start, end=end)
-#     catalog_path.unlink()
-#     assert not df.empty, "DataFrame is empty"
-#     assert len(df.columns) == 1, f"Expected 1 column, got {len(df.columns)}"
-#     print(f"✓ GS Quant: {len(df)} rows, column '{df.columns[0]}'")
-# except Exception as e:
-#     print(f"✗ GS Quant: {e}")
+# """)
 
 
 # === LOCALFILE ===
 # Uncomment and edit to test local file reading
 # Edit the path and symbol (column name) to match your file
 #
-# catalog_yaml = """
-# - my_name: test_localfile
+# test_source("localfile", """
+# - my_name: localfile
 #   source: localfile
 #   symbol: YOUR_COLUMN_NAME
 #   path: /path/to/your/file.csv
-# """
-# try:
-#     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-#         f.write(catalog_yaml)
-#         catalog_path = Path(f.name)
-#     with Client(catalog=catalog_path) as client:
-#         df = client.get(["test_localfile"], start=start, end=end)
-#     catalog_path.unlink()
-#     assert not df.empty, "DataFrame is empty"
-#     assert len(df.columns) == 1, f"Expected 1 column, got {len(df.columns)}"
-#     print(f"✓ LocalFile: {len(df)} rows, column '{df.columns[0]}'")
-# except Exception as e:
-#     print(f"✗ LocalFile: {e}")
+# """)
 
 
 print("=" * 50)
@@ -153,14 +121,13 @@ print("Smoke test complete")
 ```
 Testing metapyle connections (2024-12-01 to 2024-12-29)
 ==================================================
-✓ Bloomberg: 20 rows, column 'test_bloomberg'
-✓ Macrobond: 1 rows, column 'test_macrobond'
+✓ bloomberg: 20 rows
+✓ macrobond: 1 rows
 ==================================================
 Smoke test complete
 ```
 
 - **Row count** varies by source and data frequency (daily vs quarterly)
-- **Column name** is the `my_name` from your catalog entry
 
 ### Failure Output
 

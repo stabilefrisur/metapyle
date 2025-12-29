@@ -36,5 +36,7 @@ dmypy.json
 TODO.md
 
 # GitHub Copilot (local development aids)
-.github/skills/
-.github/agents/
+.github/skills/*
+!.github/skills/adding-api-sources/
+.github/agents/*
+!.github/agents/adding-api-sources.agent.md

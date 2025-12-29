@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from metapyle.exceptions import FetchError
+from metapyle.exceptions import FetchError, NoDataError
 from metapyle.sources.base import FetchRequest
 
 
@@ -237,3 +237,96 @@ class TestGSQuantFetchBatch:
 
         # Result should have columns from both datasets
         assert len(df.columns) == 2
+
+
+class TestGSQuantFetchErrors:
+    """Tests for GSQuantSource.fetch error handling."""
+
+    def test_fetch_missing_field(self) -> None:
+        """fetch raises FetchError if field is None."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": MagicMock(), "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            request = FetchRequest(symbol="EURUSD", field=None)
+
+            with pytest.raises(FetchError, match="requires field"):
+                source.fetch([request], "2024-01-01", "2024-01-02")
+
+    def test_fetch_invalid_field_format(self) -> None:
+        """fetch raises FetchError if field format invalid."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": MagicMock(), "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            request = FetchRequest(symbol="EURUSD", field="FXIMPLIEDVOL")  # Missing ::
+
+            with pytest.raises(FetchError, match="Invalid field format"):
+                source.fetch([request], "2024-01-01", "2024-01-02")
+
+    def test_fetch_conflicting_value_columns(self) -> None:
+        """fetch raises FetchError if same dataset has different value columns."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": MagicMock(), "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            requests = [
+                FetchRequest(symbol="EURUSD", field="FXIMPLIEDVOL::impliedVolatility"),
+                FetchRequest(symbol="USDJPY", field="FXIMPLIEDVOL::spot"),  # Different column!
+            ]
+
+            with pytest.raises(FetchError, match="different value columns"):
+                source.fetch(requests, "2024-01-01", "2024-01-02")
+
+    def test_fetch_api_error(self) -> None:
+        """fetch raises FetchError on API exception."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        mock_dataset_instance = MagicMock()
+        mock_dataset_instance.get_data.side_effect = Exception("API timeout")
+        mock_dataset_class = MagicMock(return_value=mock_dataset_instance)
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": mock_dataset_class, "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            request = FetchRequest(symbol="EURUSD", field="FXIMPLIEDVOL::impliedVolatility")
+
+            with pytest.raises(FetchError, match="gs-quant API error"):
+                source.fetch([request], "2024-01-01", "2024-01-02")
+
+    def test_fetch_empty_data(self) -> None:
+        """fetch raises NoDataError if dataset returns empty."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        mock_dataset_instance = MagicMock()
+        mock_dataset_instance.get_data.return_value = pd.DataFrame()  # Empty
+        mock_dataset_class = MagicMock(return_value=mock_dataset_instance)
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": mock_dataset_class, "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            request = FetchRequest(symbol="EURUSD", field="FXIMPLIEDVOL::impliedVolatility")
+
+            with pytest.raises(NoDataError, match="No data returned"):
+                source.fetch([request], "2024-01-01", "2024-01-02")
+
+    def test_fetch_empty_requests(self) -> None:
+        """fetch returns empty DataFrame for empty requests."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": MagicMock(), "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            df = source.fetch([], "2024-01-01", "2024-01-02")
+
+            assert isinstance(df, pd.DataFrame)
+            assert df.empty

@@ -12,6 +12,8 @@ import pytest
 # Skip all tests if gs-quant not installed
 gs_quant = pytest.importorskip("gs_quant")
 
+pytestmark = [pytest.mark.integration, pytest.mark.gsquant]
+
 
 @pytest.fixture
 def gsquant_catalog_path() -> Path:
@@ -22,24 +24,22 @@ def gsquant_catalog_path() -> Path:
 class TestGSQuantIntegration:
     """Integration tests for gs-quant data fetching."""
 
-    @pytest.mark.integration
     def test_fetch_single_symbol(self, gsquant_catalog_path: Path) -> None:
         """Fetch single symbol from gs-quant."""
         from metapyle import Client
 
         client = Client(catalog=gsquant_catalog_path)
-        df = client.fetch(["EURUSD_VOL"], start="2024-01-01", end="2024-01-31")
+        df = client.get(["EURUSD_VOL"], start="2024-01-01", end="2024-01-31")
 
         assert len(df) > 0
         assert "EURUSD_VOL" in df.columns
 
-    @pytest.mark.integration
     def test_fetch_multiple_symbols(self, gsquant_catalog_path: Path) -> None:
         """Fetch multiple symbols from same dataset."""
         from metapyle import Client
 
         client = Client(catalog=gsquant_catalog_path)
-        df = client.fetch(
+        df = client.get(
             ["EURUSD_VOL", "USDJPY_VOL"],
             start="2024-01-01",
             end="2024-01-31",

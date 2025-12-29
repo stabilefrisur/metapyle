@@ -17,6 +17,35 @@ TEST_START = "2024-01-01"
 TEST_END = "2024-06-30"
 
 
+def _macrobond_available() -> bool:
+    """Check if Macrobond API is available and connected."""
+    try:
+        import macrobond_data_api as mda
+
+        # Try to make a lightweight API call to verify connection
+        mda.get_one_entity("usgdp")
+        return True
+    except Exception:
+        return False
+
+
+def _gsquant_available() -> bool:
+    """Check if gs-quant session is initialized."""
+    try:
+        from gs_quant.session import GsSession
+
+        # Check if session is initialized (will raise if not)
+        _ = GsSession.current
+        return True
+    except Exception:
+        return False
+
+
+# Check once at module load time
+MACROBOND_AVAILABLE = _macrobond_available()
+GSQUANT_AVAILABLE = _gsquant_available()
+
+
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Add --run-private option for private series tests."""
     parser.addoption(
@@ -28,14 +57,26 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Skip private tests unless --run-private is passed."""
-    if config.getoption("--run-private"):
-        return
+    """Skip private tests unless --run-private is passed, and skip unavailable sources."""
+    if not config.getoption("--run-private"):
+        skip_private = pytest.mark.skip(reason="Need --run-private option to run")
+        for item in items:
+            if "private" in item.keywords:
+                item.add_marker(skip_private)
 
-    skip_private = pytest.mark.skip(reason="Need --run-private option to run")
-    for item in items:
-        if "private" in item.keywords:
-            item.add_marker(skip_private)
+    # Skip Macrobond tests if Macrobond is not available
+    if not MACROBOND_AVAILABLE:
+        skip_macrobond = pytest.mark.skip(reason="Macrobond not available or not connected")
+        for item in items:
+            if "macrobond" in item.keywords:
+                item.add_marker(skip_macrobond)
+
+    # Skip gs-quant tests if GsSession is not initialized
+    if not GSQUANT_AVAILABLE:
+        skip_gsquant = pytest.mark.skip(reason="GsSession not initialized")
+        for item in items:
+            if "gsquant" in item.keywords:
+                item.add_marker(skip_gsquant)
 
 
 @pytest.fixture

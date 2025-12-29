@@ -89,6 +89,7 @@ markers = [
     "integration: integration tests requiring external credentials",
     "bloomberg: tests requiring Bloomberg access",
     "macrobond: tests requiring Macrobond access",
+    "gsquant: tests requiring gs-quant session",
     "private: tests requiring private/in-house series (skipped by default)",
 ]
 

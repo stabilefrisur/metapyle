@@ -6,7 +6,7 @@ from typing import Any
 
 import pandas as pd
 
-from metapyle.exceptions import FetchError
+from metapyle.exceptions import FetchError, NoDataError
 from metapyle.sources.base import BaseSource, FetchRequest, register_source
 
 __all__ = ["GSQuantSource"]
@@ -100,7 +100,7 @@ class GSQuantSource(BaseSource):
         Raises
         ------
         FetchError
-            If gs-quant not available or API call fails.
+            If gs-quant not available, field format invalid, or API call fails.
         NoDataError
             If no data returned.
         """
@@ -114,7 +114,95 @@ class GSQuantSource(BaseSource):
                 "gs-quant package is not installed. Install with: pip install gs-quant"
             )
 
-        raise NotImplementedError("GSQuantSource.fetch not yet implemented")
+        Dataset = gs["Dataset"]
+
+        # Group requests by dataset_id
+        groups: dict[str, list[FetchRequest]] = {}
+        value_columns: dict[str, str] = {}
+
+        for req in requests:
+            if not req.field:
+                raise FetchError(
+                    "gsquant source requires field in format 'dataset_id::value_column'"
+                )
+
+            try:
+                dataset_id, value_column = _parse_field(req.field)
+            except ValueError as e:
+                raise FetchError(str(e)) from e
+
+            if dataset_id not in groups:
+                groups[dataset_id] = []
+                value_columns[dataset_id] = value_column
+            elif value_columns[dataset_id] != value_column:
+                raise FetchError(
+                    f"Cannot batch requests with different value columns for same dataset: "
+                    f"{value_columns[dataset_id]} vs {value_column}"
+                )
+
+            groups[dataset_id].append(req)
+
+        # Fetch each dataset group
+        result_dfs: list[pd.DataFrame] = []
+
+        for dataset_id, group_requests in groups.items():
+            symbols = [req.symbol for req in group_requests]
+            value_column = value_columns[dataset_id]
+
+            # Merge params from all requests
+            merged_params: dict[str, Any] = {}
+            for req in group_requests:
+                if req.params:
+                    merged_params.update(req.params)
+
+            logger.debug(
+                "fetch_start: dataset=%s, symbols=%s, params=%s",
+                dataset_id,
+                symbols,
+                merged_params,
+            )
+
+            try:
+                ds = Dataset(dataset_id)
+                data = ds.get_data(start, end, bbid=symbols, **merged_params)
+            except (FetchError, NoDataError):
+                raise
+            except Exception as e:
+                logger.error("fetch_failed: dataset=%s, error=%s", dataset_id, str(e))
+                raise FetchError(f"gs-quant API error for {dataset_id}: {e}") from e
+
+            if data.empty:
+                logger.warning("fetch_empty: dataset=%s, symbols=%s", dataset_id, symbols)
+                raise NoDataError(f"No data returned for {symbols} from {dataset_id}")
+
+            # Pivot to wide format
+            pivoted = pd.pivot_table(
+                data,
+                values=value_column,
+                index=["date"],
+                columns=["bbid"],
+            )
+
+            # Ensure DatetimeIndex
+            if not isinstance(pivoted.index, pd.DatetimeIndex):
+                pivoted.index = pd.to_datetime(pivoted.index)
+
+            result_dfs.append(pivoted)
+
+        # Merge all results
+        if not result_dfs:
+            return pd.DataFrame()
+
+        result = result_dfs[0]
+        for df in result_dfs[1:]:
+            result = result.join(df, how="outer")
+
+        logger.info(
+            "fetch_complete: columns=%s, rows=%d",
+            list(result.columns),
+            len(result),
+        )
+        return result
 
     def get_metadata(self, symbol: str) -> dict[str, Any]:
         """Retrieve metadata for a gs-quant symbol."""

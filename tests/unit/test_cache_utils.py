@@ -68,44 +68,53 @@ class TestClientListCached:
             assert cached[0]["symbol"] == "value"
 
 
-class TestClearEntry:
-    """Tests for clear_entry method."""
+class TestClientClearCache:
+    """Tests for Client.clear_cache() method."""
 
-    def test_clear_entry_removes_entry(self, tmp_path: Path) -> None:
-        """clear_entry removes specific entry from cache."""
-        cache = Cache(path=str(tmp_path / "cache.db"))
+    def test_clear_cache_by_source(self, tmp_path: Path) -> None:
+        """clear_cache(source=...) clears only that source."""
+        csv_file = tmp_path / "data.csv"
+        csv_file.write_text("date,a,b\n2024-01-01,1,2\n2024-01-02,3,4\n2024-01-03,5,6\n")
 
-        df = pd.DataFrame(
-            {"value": [1, 2]},
-            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
-        )
-        cache.put("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
-        cache.put("bloomberg", "VIX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
+        catalog = tmp_path / "catalog.yaml"
+        catalog.write_text(f"""
+- my_name: alpha
+  source: localfile
+  symbol: a
+  path: {csv_file}
+- my_name: beta
+  source: localfile
+  symbol: b
+  path: {csv_file}
+""")
 
-        # Clear one entry
-        cache.clear_entry("bloomberg", "SPX Index", "PX_LAST", None)
+        cache_path = tmp_path / "cache.db"
+        with Client(catalog=catalog, cache_path=str(cache_path)) as client:
+            # Fetch to populate cache
+            client.get(["alpha", "beta"], start="2024-01-01", end="2024-01-03")
+            assert len(client.list_cached()) == 2
 
-        # Should be gone
-        result = cache.get("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02")
-        assert result is None
+            # Clear by source
+            client.clear_cache(source="localfile")
+            assert len(client.list_cached()) == 0
 
-        # Other symbol should still exist
-        result = cache.get("bloomberg", "VIX Index", "PX_LAST", None, "2024-01-01", "2024-01-02")
-        assert result is not None
+    def test_clear_cache_all(self, tmp_path: Path) -> None:
+        """clear_cache() with no args clears everything."""
+        csv_file = tmp_path / "data.csv"
+        csv_file.write_text("date,value\n2024-01-01,100\n")
 
-    def test_clear_entry_returns_count(self, tmp_path: Path) -> None:
-        """clear_entry returns number of entries cleared."""
-        cache = Cache(path=str(tmp_path / "cache.db"))
+        catalog = tmp_path / "catalog.yaml"
+        catalog.write_text(f"""
+- my_name: test
+  source: localfile
+  symbol: value
+  path: {csv_file}
+""")
 
-        df = pd.DataFrame(
-            {"value": [1, 2]},
-            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
-        )
-        cache.put("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
+        cache_path = tmp_path / "cache.db"
+        with Client(catalog=catalog, cache_path=str(cache_path)) as client:
+            client.get(["test"], start="2024-01-01", end="2024-01-01")
+            assert len(client.list_cached()) == 1
 
-        count = cache.clear_entry("bloomberg", "SPX Index", "PX_LAST", None)
-        assert count == 1
-
-        # Clearing again should return 0
-        count = cache.clear_entry("bloomberg", "SPX Index", "PX_LAST", None)
-        assert count == 0
+            client.clear_cache()
+            assert len(client.list_cached()) == 0

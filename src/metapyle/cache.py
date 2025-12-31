@@ -396,54 +396,30 @@ class Cache:
             )
             return None
 
-    def clear(
-        self,
-        source: str | None = None,
-        symbol: str | None = None,
-    ) -> None:
+    def clear(self, source: str | None = None) -> None:
         """
         Clear cache entries.
-
-        If source and symbol are provided, only clears entries matching both.
-        Otherwise, clears all entries.
 
         Parameters
         ----------
         source : str | None, optional
-            Data source name to clear.
-        symbol : str | None, optional
-            Symbol to clear. Must be provided with source.
+            If provided, only clears entries for this data source.
+            If None, clears all cached data.
         """
-        if not self._enabled:
+        if not self._enabled or self._conn is None:
             return
 
-        if self._conn is None:
-            return
-
-        if source is not None and symbol is not None:
-            # Get entry IDs to delete
-            cursor = self._conn.execute(
+        if source is not None:
+            # Clear entries for specific source
+            self._conn.execute(
                 """
-                SELECT id FROM cache_entries
-                WHERE source = ? AND symbol = ?
+                DELETE FROM cache_data
+                WHERE entry_id IN (SELECT id FROM cache_entries WHERE source = ?)
                 """,
-                (source, symbol),
+                (source,),
             )
-            entry_ids = [row[0] for row in cursor.fetchall()]
-
-            if entry_ids:
-                # Delete data first (foreign key constraint)
-                placeholders = ",".join("?" * len(entry_ids))
-                self._conn.execute(
-                    f"DELETE FROM cache_data WHERE entry_id IN ({placeholders})",
-                    entry_ids,
-                )
-                self._conn.execute(
-                    f"DELETE FROM cache_entries WHERE id IN ({placeholders})",
-                    entry_ids,
-                )
-
-            logger.info("cache_cleared: source=%s, symbol=%s", source, symbol)
+            self._conn.execute("DELETE FROM cache_entries WHERE source = ?", (source,))
+            logger.info("cache_cleared: source=%s", source)
         else:
             # Clear all
             self._conn.execute("DELETE FROM cache_data")
@@ -489,73 +465,6 @@ class Cache:
             }
             for row in cursor.fetchall()
         ]
-
-    def clear_entry(
-        self,
-        source: str,
-        symbol: str,
-        field: str | None,
-        path: str | None,
-    ) -> int:
-        """
-        Clear a specific cache entry.
-
-        An entry is uniquely identified by (source, symbol, field, path).
-
-        Parameters
-        ----------
-        source : str
-            Data source name.
-        symbol : str
-            Symbol identifier.
-        field : str | None
-            Field name (can be None).
-        path : str | None
-            File path (can be None).
-
-        Returns
-        -------
-        int
-            Number of entries cleared (0 or 1).
-        """
-        if not self._enabled or self._conn is None:
-            return 0
-
-        # Delete data first (foreign key)
-        self._conn.execute(
-            """
-            DELETE FROM cache_data
-            WHERE entry_id IN (
-                SELECT id FROM cache_entries
-                WHERE source = ? AND symbol = ?
-                AND (field IS ? OR (field IS NULL AND ? IS NULL))
-                AND (path IS ? OR (path IS NULL AND ? IS NULL))
-            )
-            """,
-            (source, symbol, field, field, path, path),
-        )
-
-        cursor = self._conn.execute(
-            """
-            DELETE FROM cache_entries
-            WHERE source = ? AND symbol = ?
-            AND (field IS ? OR (field IS NULL AND ? IS NULL))
-            AND (path IS ? OR (path IS NULL AND ? IS NULL))
-            """,
-            (source, symbol, field, field, path, path),
-        )
-
-        count = cursor.rowcount
-        self._conn.commit()
-
-        logger.info(
-            "cache_cleared: source=%s, symbol=%s, field=%s, count=%d",
-            source,
-            symbol,
-            field,
-            count,
-        )
-        return count
 
     def _delete_entry(
         self,

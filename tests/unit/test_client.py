@@ -366,21 +366,17 @@ def test_client_clear_cache(catalog_yaml: Path, cache_path: str) -> None:
     assert cached is None
 
 
-def test_client_clear_cache_specific_symbol(
+def test_client_clear_cache_specific_source(
     catalog_yaml: Path,
     cache_path: str,
 ) -> None:
-    """Client.clear_cache() can clear a specific symbol."""
+    """Client.clear_cache() can clear a specific source."""
     client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
 
-    # Populate cache for two symbols
+    # Populate cache
     client.get(["TEST_DAILY"], start="2024-01-01", end="2024-01-10")
-    client.get(["TEST_DAILY_2"], start="2024-01-01", end="2024-01-10")
 
-    # Clear cache for one symbol
-    client.clear_cache(symbol="TEST_DAILY")
-
-    # Verify TEST_DAILY is cleared
+    # Verify cached
     entry1 = client._catalog.get("TEST_DAILY")
     cached1 = client._cache.get(
         source=entry1.source,
@@ -390,19 +386,21 @@ def test_client_clear_cache_specific_symbol(
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
-    assert cached1 is None
+    assert cached1 is not None
 
-    # Verify TEST_DAILY_2 is still cached
-    entry2 = client._catalog.get("TEST_DAILY_2")
+    # Clear cache for the source
+    client.clear_cache(source=entry1.source)
+
+    # Verify cleared
     cached2 = client._cache.get(
-        source=entry2.source,
-        symbol=entry2.symbol,
-        field=entry2.field,
+        source=entry1.source,
+        symbol=entry1.symbol,
+        field=entry1.field,
         path=None,
         start_date="2024-01-01",
         end_date="2024-01-10",
     )
-    assert cached2 is not None
+    assert cached2 is None
 
 
 # ============================================================================

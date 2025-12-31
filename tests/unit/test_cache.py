@@ -196,28 +196,28 @@ class TestCacheClear:
         assert cache.get("source2", "SYM2", "volume", None, "2024-01-01", "2024-01-05") is None
         cache.close()
 
-    def test_cache_clear_specific_symbol(self, tmp_path: Path) -> None:
-        """Clear with source and symbol only removes matching entries."""
+    def test_cache_clear_specific_source(self, tmp_path: Path) -> None:
+        """Clear with source only removes entries for that source."""
         db_path = tmp_path / "test_cache.db"
         cache = Cache(path=str(db_path))
 
         dates = pd.date_range("2024-01-01", "2024-01-05", freq="D")
         df = pd.DataFrame({"value": [1.0, 2.0, 3.0, 4.0, 5.0]}, index=dates)
 
-        # Store multiple entries
-        cache.put("source", "SYM1", "price", None, "2024-01-01", "2024-01-05", df)
-        cache.put("source", "SYM2", "price", None, "2024-01-01", "2024-01-05", df)
-        cache.put("other", "SYM1", "price", None, "2024-01-01", "2024-01-05", df)
+        # Store entries from different sources
+        cache.put("bloomberg", "SPX", "price", None, "2024-01-01", "2024-01-05", df)
+        cache.put("bloomberg", "VIX", "price", None, "2024-01-01", "2024-01-05", df)
+        cache.put("macrobond", "usgdp", None, None, "2024-01-01", "2024-01-05", df)
 
-        # Clear only source/SYM1
-        cache.clear(source="source", symbol="SYM1")
+        # Clear only bloomberg
+        cache.clear(source="bloomberg")
 
-        # source/SYM1 should be gone
-        assert cache.get("source", "SYM1", "price", None, "2024-01-01", "2024-01-05") is None
+        # bloomberg entries should be gone
+        assert cache.get("bloomberg", "SPX", "price", None, "2024-01-01", "2024-01-05") is None
+        assert cache.get("bloomberg", "VIX", "price", None, "2024-01-01", "2024-01-05") is None
 
-        # Others should remain
-        assert cache.get("source", "SYM2", "price", None, "2024-01-01", "2024-01-05") is not None
-        assert cache.get("other", "SYM1", "price", None, "2024-01-01", "2024-01-05") is not None
+        # macrobond should remain
+        assert cache.get("macrobond", "usgdp", None, None, "2024-01-01", "2024-01-05") is not None
         cache.close()
 
 

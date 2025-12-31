@@ -326,22 +326,20 @@ class Client:
         ordered_cols = [name for name in names if name in combined.columns]
         return combined[ordered_cols]
 
-    def clear_cache(self, *, symbol: str | None = None) -> None:
+    def clear_cache(self, *, source: str | None = None) -> None:
         """
         Clear cached data.
 
         Parameters
         ----------
-        symbol : str | None, optional
-            If provided, only clear cache for this catalog symbol.
+        source : str | None, optional
+            If provided, only clear cache for this data source (e.g., "bloomberg").
             If None, clears all cached data.
         """
-        if symbol is not None:
-            entry = self._catalog.get(symbol)
-            self._cache.clear(source=entry.source, symbol=entry.symbol)
-            logger.info("cache_cleared: symbol=%s", symbol)
+        self._cache.clear(source=source)
+        if source is not None:
+            logger.info("cache_cleared: source=%s", source)
         else:
-            self._cache.clear()
             logger.info("cache_cleared: all")
 
     def list_cached(self) -> list[dict[str, str | None]]:

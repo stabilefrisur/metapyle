@@ -29,10 +29,10 @@ class TestGSQuantIntegration:
         from metapyle import Client
 
         client = Client(catalog=gsquant_catalog_path)
-        df = client.get(["EURUSD_VOL"], start="2024-01-01", end="2024-01-31")
+        df = client.get(["eurusd_vol"], start="2024-01-01", end="2024-01-31")
 
         assert len(df) > 0
-        assert "EURUSD_VOL" in df.columns
+        assert "eurusd_vol" in df.columns
 
     def test_fetch_multiple_symbols(self, gsquant_catalog_path: Path) -> None:
         """Fetch multiple symbols from same dataset."""
@@ -40,11 +40,11 @@ class TestGSQuantIntegration:
 
         client = Client(catalog=gsquant_catalog_path)
         df = client.get(
-            ["EURUSD_VOL", "USDJPY_VOL"],
+            ["eurusd_vol", "usdjpy_vol"],
             start="2024-01-01",
             end="2024-01-31",
         )
 
         assert len(df) > 0
-        assert "EURUSD_VOL" in df.columns
-        assert "USDJPY_VOL" in df.columns
+        assert "eurusd_vol" in df.columns
+        assert "usdjpy_vol" in df.columns

@@ -1,7 +1,7 @@
 # GS-Quant integration test catalog
 # Requires gs-quant installed and authenticated via GsSession
 
-- my_name: EURUSD_VOL
+- my_name: eurusd_vol
   source: gsquant
   symbol: EURUSD
   field: FXIMPLIEDVOL::impliedVolatility
@@ -10,7 +10,7 @@
     tenor: 1m
     deltaStrike: DN
 
-- my_name: USDJPY_VOL
+- my_name: usdjpy_vol
   source: gsquant
   symbol: USDJPY
   field: FXIMPLIEDVOL::impliedVolatility

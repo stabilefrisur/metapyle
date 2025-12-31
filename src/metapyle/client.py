@@ -196,7 +196,7 @@ class Client:
             self._check_index_alignment(dfs)
 
         # Assemble into wide DataFrame
-        return self._assemble_dataframe(dfs)
+        return self._assemble_dataframe(dfs, symbols)
 
     def _check_index_alignment(self, dfs: dict[str, pd.DataFrame]) -> None:
         """
@@ -274,21 +274,26 @@ class Client:
 
         return source.fetch(requests, start, end)
 
-    def _assemble_dataframe(self, dfs: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    def _assemble_dataframe(
+        self, dfs: dict[str, pd.DataFrame], names: list[str]
+    ) -> pd.DataFrame:
         """
         Assemble individual DataFrames into a wide DataFrame.
 
-        Renames source columns to my_name from catalog.
+        Renames source columns to my_name from catalog and preserves
+        the order specified by names.
 
         Parameters
         ----------
         dfs : dict[str, pd.DataFrame]
             Dictionary mapping my_name to DataFrames.
+        names : list[str]
+            Original input symbol names, used to preserve column order.
 
         Returns
         -------
         pd.DataFrame
-            Wide DataFrame with columns named by my_name.
+            Wide DataFrame with columns named by my_name in input order.
         """
         if not dfs:
             return pd.DataFrame()
@@ -300,8 +305,11 @@ class Client:
             col = df.columns[0]
             renamed.append(df[[col]].rename(columns={col: my_name}))
 
-        result = pd.concat(renamed, axis=1)
-        return result
+        combined = pd.concat(renamed, axis=1)
+
+        # Preserve input order
+        ordered_cols = [name for name in names if name in combined.columns]
+        return combined[ordered_cols]
 
     def clear_cache(self, *, symbol: str | None = None) -> None:
         """

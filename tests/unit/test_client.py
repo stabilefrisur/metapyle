@@ -710,6 +710,38 @@ class MockSourceWithParams(BaseSource):
         return {"symbol": symbol}
 
 
+class TestColumnOrder:
+    """Tests for preserving column order."""
+
+    def test_fetch_preserves_column_order(self, tmp_path: Path) -> None:
+        """Columns should appear in same order as input symbols."""
+        catalog_yaml = tmp_path / "catalog.yaml"
+        catalog_yaml.write_text(
+            """
+            - my_name: z_series
+              source: mock
+              symbol: Z_SYMBOL
+            - my_name: a_series
+              source: mock
+              symbol: A_SYMBOL
+            - my_name: m_series
+              source: mock
+              symbol: M_SYMBOL
+            """
+        )
+
+        client = Client(catalog=str(catalog_yaml), cache_enabled=False)
+
+        # Request in specific order: z, a, m
+        df = client.get(["z_series", "a_series", "m_series"], "2024-01-01", "2024-01-05")
+
+        assert list(df.columns) == ["z_series", "a_series", "m_series"]
+
+        # Request in reverse order should also preserve order
+        df2 = client.get(["m_series", "a_series", "z_series"], "2024-01-01", "2024-01-05")
+        assert list(df2.columns) == ["m_series", "a_series", "z_series"]
+
+
 class TestClientParams:
     """Tests for Client passing params to source."""
 

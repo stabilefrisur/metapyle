@@ -787,3 +787,34 @@ class TestClientParams:
         assert _captured_requests[0].params is None
 
         client.close()
+
+
+class TestGetRawParams:
+    """Tests for get_raw params parameter."""
+
+    def test_get_raw_accepts_params(self, tmp_path: Path) -> None:
+        """get_raw should accept params parameter."""
+        csv_file = tmp_path / "data.csv"
+        csv_file.write_text(
+            "date,test\n2024-01-01,100\n2024-01-02,101\n2024-01-03,102\n"
+        )
+
+        catalog = tmp_path / "catalog.yaml"
+        catalog.write_text(f"""
+- my_name: test
+  source: localfile
+  symbol: test
+  path: {csv_file}
+""")
+
+        with Client(catalog=catalog, cache_enabled=False) as client:
+            # get_raw should accept params without error
+            df = client.get_raw(
+                source="localfile",
+                symbol="test",
+                start="2024-01-01",
+                end="2024-01-03",
+                path=str(csv_file),
+                params={"some_param": "value"},  # Should be accepted
+            )
+            assert len(df) == 3

@@ -386,6 +386,7 @@ class Client:
         *,
         field: str | None = None,
         path: str | None = None,
+        params: dict[str, Any] | None = None,
         use_cache: bool = True,
     ) -> pd.DataFrame:
         """
@@ -407,6 +408,8 @@ class Client:
             Source-specific field (e.g., "PX_LAST" for Bloomberg).
         path : str | None, optional
             Path to local file for localfile source.
+        params : dict[str, Any] | None, optional
+            Source-specific parameters (e.g., Macrobond unified options).
         use_cache : bool, optional
             If False, bypass cache. Default True.
 
@@ -442,7 +445,7 @@ class Client:
 
         # Fetch from source
         source_adapter = self._registry.get(source)
-        request = FetchRequest(symbol=symbol, field=field, path=path)
+        request = FetchRequest(symbol=symbol, field=field, path=path, params=params)
 
         logger.debug("get_raw_from_source: source=%s, symbol=%s", source, symbol)
         df = source_adapter.fetch([request], start, end)

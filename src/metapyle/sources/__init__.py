@@ -18,13 +18,17 @@ from metapyle.sources.base import (
     make_column_name,
     register_source,
 )
+from metapyle.sources.bloomberg import BloombergSource
 from metapyle.sources.gsquant import GSQuantSource
+from metapyle.sources.localfile import LocalFileSource
 from metapyle.sources.macrobond import MacrobondSource
 
 __all__ = [
     "BaseSource",
+    "BloombergSource",
     "FetchRequest",
     "GSQuantSource",
+    "LocalFileSource",
     "MacrobondSource",
     "SourceRegistry",
     "make_column_name",

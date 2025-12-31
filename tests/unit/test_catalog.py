@@ -1097,6 +1097,41 @@ minimal,bloomberg,TEST Index,PX_LAST,,,
         assert reload_entry.unit == orig_entry.unit
 
 
+class TestFromCsvSanitization:
+    """Tests for CSV column sanitization."""
+
+    def test_from_csv_strips_column_whitespace(self, tmp_path: Path) -> None:
+        """Column names with trailing whitespace should be handled."""
+        csv_file = tmp_path / "catalog.csv"
+        # Note: columns have trailing spaces
+        csv_file.write_text(
+            'my_name , source , symbol \n'
+            'test_entry,localfile,value\n'
+        )
+
+        catalog = Catalog.from_csv(str(csv_file))
+        entry = catalog.get("test_entry")
+
+        assert entry.my_name == "test_entry"
+        assert entry.source == "localfile"
+        assert entry.symbol == "value"
+
+    def test_from_csv_strips_value_whitespace(self, tmp_path: Path) -> None:
+        """Values with whitespace should be stripped."""
+        csv_file = tmp_path / "catalog.csv"
+        csv_file.write_text(
+            'my_name,source,symbol\n'
+            ' test_entry , localfile , value \n'
+        )
+
+        catalog = Catalog.from_csv(str(csv_file))
+        entry = catalog.get("test_entry")
+
+        assert entry.my_name == "test_entry"
+        assert entry.source == "localfile"
+        assert entry.symbol == "value"
+
+
 def test_catalog_yaml_to_csv_roundtrip(tmp_path: Path) -> None:
     """Catalog loaded from YAML, exported to CSV, reloaded from CSV matches original."""
     # Create YAML with comprehensive test data:

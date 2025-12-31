@@ -176,6 +176,8 @@ class Catalog:
                 reader = csv.DictReader(f)
 
                 for row_num, row in enumerate(reader, start=2):  # Row 1 is header
+                    # Sanitize column names (strip whitespace from keys)
+                    row = {k.strip() if k else k: v for k, v in row.items()}
                     # Trim whitespace from all values
                     row = {k: v.strip() if v else v for k, v in row.items()}
 

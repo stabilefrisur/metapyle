@@ -1,7 +1,6 @@
 """Tests for consistent date index naming across sources."""
 
 
-
 class TestIndexNameConsistency:
     """All sources should return DatetimeIndex named 'date'."""
 

@@ -8,7 +8,7 @@ from metapyle.catalog import Catalog, CatalogEntry
 from metapyle.exceptions import (
     CatalogValidationError,
     DuplicateNameError,
-    SymbolNotFoundError,
+    NameNotFoundError,
     UnknownSourceError,
 )
 from metapyle.sources.base import SourceRegistry
@@ -106,7 +106,7 @@ class TestFromCsvParams:
         """params column should be parsed as JSON dict."""
         csv_file = tmp_path / "catalog.csv"
         csv_file.write_text(
-            'my_name,source,symbol,params\n'
+            "my_name,source,symbol,params\n"
             'test_entry,gsquant,AAPL,"{""interval"": ""1d"", ""limit"": 100}"\n'
         )
 
@@ -118,10 +118,7 @@ class TestFromCsvParams:
     def test_from_csv_handles_empty_params(self, tmp_path: Path) -> None:
         """Empty params column should result in None."""
         csv_file = tmp_path / "catalog.csv"
-        csv_file.write_text(
-            'my_name,source,symbol,params\n'
-            'test_entry,localfile,value,\n'
-        )
+        csv_file.write_text("my_name,source,symbol,params\ntest_entry,localfile,value,\n")
 
         catalog = Catalog.from_csv(str(csv_file))
         entry = catalog.get("test_entry")
@@ -132,8 +129,7 @@ class TestFromCsvParams:
         """Invalid JSON in params column should raise CatalogValidationError."""
         csv_file = tmp_path / "catalog.csv"
         csv_file.write_text(
-            'my_name,source,symbol,params\n'
-            'test_entry,gsquant,AAPL,{not valid json}\n'
+            "my_name,source,symbol,params\ntest_entry,gsquant,AAPL,{not valid json}\n"
         )
 
         with pytest.raises(CatalogValidationError, match="Invalid JSON in params"):
@@ -468,11 +464,11 @@ def test_catalog_load_duplicate_across_files(tmp_path: Path) -> None:
         Catalog.from_yaml([str(file1), str(file2)])
 
 
-def test_catalog_get_unknown_symbol() -> None:
-    """Catalog raises SymbolNotFoundError for unknown symbol."""
+def test_catalog_get_unknown_name() -> None:
+    """Catalog raises NameNotFoundError for unknown name."""
     catalog = Catalog({})
 
-    with pytest.raises(SymbolNotFoundError, match="UNKNOWN"):
+    with pytest.raises(NameNotFoundError, match="UNKNOWN"):
         catalog.get("UNKNOWN")
 
 
@@ -1104,10 +1100,7 @@ class TestFromCsvSanitization:
         """Column names with trailing whitespace should be handled."""
         csv_file = tmp_path / "catalog.csv"
         # Note: columns have trailing spaces
-        csv_file.write_text(
-            'my_name , source , symbol \n'
-            'test_entry,localfile,value\n'
-        )
+        csv_file.write_text("my_name , source , symbol \ntest_entry,localfile,value\n")
 
         catalog = Catalog.from_csv(str(csv_file))
         entry = catalog.get("test_entry")
@@ -1119,10 +1112,7 @@ class TestFromCsvSanitization:
     def test_from_csv_strips_value_whitespace(self, tmp_path: Path) -> None:
         """Values with whitespace should be stripped."""
         csv_file = tmp_path / "catalog.csv"
-        csv_file.write_text(
-            'my_name,source,symbol\n'
-            ' test_entry , localfile , value \n'
-        )
+        csv_file.write_text("my_name,source,symbol\n test_entry , localfile , value \n")
 
         catalog = Catalog.from_csv(str(csv_file))
         entry = catalog.get("test_entry")

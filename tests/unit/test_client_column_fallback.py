@@ -1,6 +1,5 @@
 """Tests for column name fallback when source ignores field."""
 
-
 from metapyle.sources.base import make_column_name
 
 

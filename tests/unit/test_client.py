@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from metapyle.client import Client
-from metapyle.exceptions import SymbolNotFoundError, UnknownSourceError
+from metapyle.exceptions import NameNotFoundError, UnknownSourceError
 from metapyle.sources.base import BaseSource, FetchRequest, register_source
 
 # ============================================================================
@@ -241,11 +241,11 @@ def test_client_get_frequency_alignment_downsample(
     assert isinstance(df.index, pd.DatetimeIndex)
 
 
-def test_client_get_unknown_symbol_raises(catalog_yaml: Path, cache_path: str) -> None:
-    """Client.get() raises SymbolNotFoundError for unknown symbol."""
+def test_client_get_unknown_name_raises(catalog_yaml: Path, cache_path: str) -> None:
+    """Client.get() raises NameNotFoundError for unknown name."""
     client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
 
-    with pytest.raises(SymbolNotFoundError, match="UNKNOWN"):
+    with pytest.raises(NameNotFoundError, match="UNKNOWN"):
         client.get(["UNKNOWN"], start="2024-01-01", end="2024-01-10")
 
 
@@ -443,14 +443,14 @@ def test_client_get_metadata_includes_source_info(
     assert "symbol" in metadata  # From source metadata
 
 
-def test_client_get_metadata_unknown_symbol_raises(
+def test_client_get_metadata_unknown_name_raises(
     catalog_yaml: Path,
     cache_path: str,
 ) -> None:
-    """Client.get_metadata() raises SymbolNotFoundError for unknown symbol."""
+    """Client.get_metadata() raises NameNotFoundError for unknown name."""
     client = Client(catalog=str(catalog_yaml), cache_path=cache_path)
 
-    with pytest.raises(SymbolNotFoundError, match="UNKNOWN"):
+    with pytest.raises(NameNotFoundError, match="UNKNOWN"):
         client.get_metadata("UNKNOWN")
 
 
@@ -793,9 +793,7 @@ class TestGetRawParams:
     def test_get_raw_accepts_params(self, tmp_path: Path) -> None:
         """get_raw should accept params parameter."""
         csv_file = tmp_path / "data.csv"
-        csv_file.write_text(
-            "date,test\n2024-01-01,100\n2024-01-02,101\n2024-01-03,102\n"
-        )
+        csv_file.write_text("date,test\n2024-01-01,100\n2024-01-02,101\n2024-01-03,102\n")
 
         catalog = tmp_path / "catalog.yaml"
         catalog.write_text(f"""

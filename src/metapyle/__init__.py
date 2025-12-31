@@ -11,8 +11,8 @@ from metapyle.exceptions import (
     DuplicateNameError,
     FetchError,
     MetapyleError,
+    NameNotFoundError,
     NoDataError,
-    SymbolNotFoundError,
     UnknownSourceError,
 )
 from metapyle.sources import BaseSource, FetchRequest, register_source
@@ -28,7 +28,7 @@ __all__ = [
     "CatalogValidationError",
     "DuplicateNameError",
     "FetchError",
+    "NameNotFoundError",
     "NoDataError",
-    "SymbolNotFoundError",
     "UnknownSourceError",
 ]

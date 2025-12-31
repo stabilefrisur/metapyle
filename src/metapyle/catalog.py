@@ -15,7 +15,7 @@ import yaml
 from metapyle.exceptions import (
     CatalogValidationError,
     DuplicateNameError,
-    SymbolNotFoundError,
+    NameNotFoundError,
 )
 
 __all__ = ["Catalog", "CatalogEntry"]
@@ -258,7 +258,7 @@ class Catalog:
     def get(self, name: str) -> CatalogEntry:
         """Get a catalog entry by name."""
         if name not in self._entries:
-            raise SymbolNotFoundError(
+            raise NameNotFoundError(
                 f"Symbol not found in catalog: {name}. "
                 f"Available: {', '.join(sorted(self._entries.keys())[:5])}"
                 + ("..." if len(self._entries) > 5 else "")

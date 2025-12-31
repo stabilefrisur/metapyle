@@ -844,7 +844,7 @@ Metapyle uses a fail-fast approach: errors are raised immediately with clear mes
 |-----------|----------------|
 | `CatalogValidationError` | YAML malformed or missing required fields |
 | `DuplicateNameError` | Same `my_name` in multiple entries |
-| `SymbolNotFoundError` | Requested name not in catalog |
+| `NameNotFoundError` | Requested name not in catalog |
 | `UnknownSourceError` | Unknown source name |
 | `FetchError` | Data retrieval failed (API error, file/column not found) |
 | `NoDataError` | Source returned empty data |

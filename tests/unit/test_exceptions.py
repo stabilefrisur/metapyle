@@ -8,8 +8,8 @@ from metapyle.exceptions import (
     DuplicateNameError,
     FetchError,
     MetapyleError,
+    NameNotFoundError,
     NoDataError,
-    SymbolNotFoundError,
     UnknownSourceError,
 )
 
@@ -52,9 +52,9 @@ def test_unknown_source_error_inherits_from_catalog_error() -> None:
     assert isinstance(error, CatalogError)
 
 
-def test_symbol_not_found_error_inherits_from_catalog_error() -> None:
-    """SymbolNotFoundError should inherit from CatalogError."""
-    error = SymbolNotFoundError("symbol not found")
+def test_name_not_found_error_inherits_from_catalog_error() -> None:
+    """NameNotFoundError should inherit from CatalogError."""
+    error = NameNotFoundError("name not found")
     assert isinstance(error, CatalogError)
 
 
@@ -73,7 +73,7 @@ def test_no_data_error_inherits_from_fetch_error() -> None:
         CatalogValidationError,
         DuplicateNameError,
         UnknownSourceError,
-        SymbolNotFoundError,
+        NameNotFoundError,
         NoDataError,
     ],
 )

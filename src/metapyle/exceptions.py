@@ -10,7 +10,7 @@ __all__ = [
     "CatalogValidationError",
     "DuplicateNameError",
     "UnknownSourceError",
-    "SymbolNotFoundError",
+    "NameNotFoundError",
     "NoDataError",
 ]
 
@@ -39,7 +39,7 @@ class UnknownSourceError(CatalogError):
     """Raised when a catalog references a source that is not registered."""
 
 
-class SymbolNotFoundError(CatalogError):
+class NameNotFoundError(CatalogError):
     """Raised when a queried name is not found in the catalog."""
 
 

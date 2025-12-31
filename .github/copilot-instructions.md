@@ -351,7 +351,7 @@ MetapyleError (base)
 │   ├── CatalogValidationError (malformed YAML, missing fields)
 │   ├── DuplicateNameError (same my_name twice)
 │   ├── UnknownSourceError (source not registered)
-│   └── SymbolNotFoundError (name not in catalog)
+│   └── NameNotFoundError (name not in catalog)
 └── FetchError (data retrieval)
     └── NoDataError (adapter returned empty)
 ```

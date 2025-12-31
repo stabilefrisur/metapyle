@@ -59,7 +59,7 @@ class Client:
 
     def get(
         self,
-        symbols: list[str],
+        names: list[str],
         start: str,
         end: str | None = None,
         *,
@@ -68,11 +68,11 @@ class Client:
         use_cache: bool = True,
     ) -> pd.DataFrame:
         """
-        Fetch time-series data for multiple symbols.
+        Fetch time-series data for multiple catalog names.
 
         Parameters
         ----------
-        symbols : list[str]
+        names : list[str]
             List of catalog names to fetch.
         start : str
             Start date in ISO format (YYYY-MM-DD).
@@ -84,7 +84,7 @@ class Client:
             don't align.
         output_format : str, optional
             Output format: "wide" (default) or "long".
-            Wide: DatetimeIndex, one column per symbol.
+            Wide: DatetimeIndex, one column per name.
             Long: Columns [date, symbol, value], one row per observation.
         use_cache : bool, optional
             Whether to use cached data. Default is True.
@@ -96,8 +96,8 @@ class Client:
 
         Raises
         ------
-        SymbolNotFoundError
-            If any symbol is not in the catalog.
+        NameNotFoundError
+            If any name is not in the catalog.
         FetchError
             If data retrieval fails for any symbol.
         ValueError
@@ -108,14 +108,14 @@ class Client:
         if end is None:
             end = datetime.date.today().isoformat()
 
-        # Resolve entries (raises SymbolNotFoundError if not found)
-        entries = [self._catalog.get(symbol) for symbol in symbols]
+        # Resolve entries (raises NameNotFoundError if not found)
+        entries = [self._catalog.get(name) for name in names]
 
         if frequency is not None:
             logger.info(
-                "frequency_alignment_requested: target=%s, symbols=%d",
+                "frequency_alignment_requested: target=%s, names=%d",
                 frequency,
-                len(symbols),
+                len(names),
             )
 
         # Collect cached and uncached entries
@@ -217,7 +217,7 @@ class Client:
             self._check_index_alignment(dfs)
 
         # Assemble into wide DataFrame
-        result = self._assemble_dataframe(dfs, symbols)
+        result = self._assemble_dataframe(dfs, names)
 
         # Convert to long format if requested
         if output_format == "long":
@@ -305,9 +305,7 @@ class Client:
 
         return source.fetch(requests, start, end)
 
-    def _assemble_dataframe(
-        self, dfs: dict[str, pd.DataFrame], names: list[str]
-    ) -> pd.DataFrame:
+    def _assemble_dataframe(self, dfs: dict[str, pd.DataFrame], names: list[str]) -> pd.DataFrame:
         """
         Assemble individual DataFrames into a wide DataFrame.
 
@@ -377,15 +375,15 @@ class Client:
         """
         return self._cache.list_cached_entries()
 
-    def get_metadata(self, symbol: str) -> dict[str, Any]:
+    def get_metadata(self, name: str) -> dict[str, Any]:
         """
-        Retrieve metadata for a catalog symbol.
+        Retrieve metadata for a catalog entry.
 
         Frequency is inferred from source metadata if available, otherwise None.
 
         Parameters
         ----------
-        symbol : str
+        name : str
             Catalog name.
 
         Returns
@@ -395,18 +393,18 @@ class Client:
 
         Raises
         ------
-        SymbolNotFoundError
-            If symbol not in catalog.
+        NameNotFoundError
+            If name not in catalog.
         """
-        entry = self._catalog.get(symbol)
+        entry = self._catalog.get(name)
         source = self._registry.get(entry.source)
 
         # Get source-specific metadata
         source_meta = source.get_metadata(entry.symbol)
 
         logger.debug(
-            "get_metadata: symbol=%s, source=%s",
-            symbol,
+            "get_metadata: name=%s, source=%s",
+            name,
             entry.source,
         )
 

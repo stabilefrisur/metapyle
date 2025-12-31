@@ -64,6 +64,7 @@ class Client:
         end: str | None = None,
         *,
         frequency: str | None = None,
+        output_format: str = "wide",
         use_cache: bool = True,
     ) -> pd.DataFrame:
         """
@@ -81,13 +82,17 @@ class Client:
             Pandas frequency string for alignment (e.g., "D", "ME", "QE").
             If omitted, data is returned as-is with a warning if indexes
             don't align.
+        output_format : str, optional
+            Output format: "wide" (default) or "tall".
+            Wide: DatetimeIndex, one column per symbol.
+            Tall: Columns [date, symbol, value], one row per observation.
         use_cache : bool, optional
             Whether to use cached data. Default is True.
 
         Returns
         -------
         pd.DataFrame
-            Wide DataFrame with DatetimeIndex and columns named by catalog names.
+            DataFrame in the requested format.
 
         Raises
         ------
@@ -96,7 +101,8 @@ class Client:
         FetchError
             If data retrieval fails for any symbol.
         ValueError
-            If frequency is an invalid pandas frequency string.
+            If frequency is an invalid pandas frequency string, or
+            output_format is not "wide" or "tall".
         """
         # Default end to today if not specified
         if end is None:
@@ -211,7 +217,17 @@ class Client:
             self._check_index_alignment(dfs)
 
         # Assemble into wide DataFrame
-        return self._assemble_dataframe(dfs, symbols)
+        result = self._assemble_dataframe(dfs, symbols)
+
+        # Convert to tall format if requested
+        if output_format == "tall":
+            from metapyle.processing import flatten_to_tall
+
+            return flatten_to_tall(result)
+        elif output_format != "wide":
+            raise ValueError(f"output_format must be 'wide' or 'tall', got '{output_format}'")
+
+        return result
 
     def _check_index_alignment(self, dfs: dict[str, pd.DataFrame]) -> None:
         """

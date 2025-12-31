@@ -1,7 +1,11 @@
 """Tests for flatten_to_tall function."""
 
-import pandas as pd
+from pathlib import Path
 
+import pandas as pd
+import pytest
+
+from metapyle import Client
 from metapyle.processing import flatten_to_tall
 
 
@@ -67,3 +71,78 @@ class TestFlattenToTall:
 
         assert len(result) == 0
         assert list(result.columns) == ["date", "symbol", "value"]
+
+
+class TestClientOutputFormat:
+    """Tests for Client.get() output_format parameter."""
+
+    def test_default_wide_format(self, tmp_path: Path) -> None:
+        """Default output format is wide."""
+        csv_file = tmp_path / "data.csv"
+        csv_file.write_text("date,a,b\n2024-01-01,1,2\n2024-01-02,3,4\n2024-01-03,5,6\n")
+
+        catalog = tmp_path / "catalog.yaml"
+        catalog.write_text(f"""
+- my_name: alpha
+  source: localfile
+  symbol: a
+  path: {csv_file}
+- my_name: beta
+  source: localfile
+  symbol: b
+  path: {csv_file}
+""")
+
+        with Client(catalog=catalog, cache_enabled=False) as client:
+            df = client.get(["alpha", "beta"], start="2024-01-01", end="2024-01-03")
+
+        # Wide format: columns are symbol names
+        assert list(df.columns) == ["alpha", "beta"]
+        assert len(df) == 3
+
+    def test_tall_format(self, tmp_path: Path) -> None:
+        """output_format='tall' returns melted DataFrame."""
+        csv_file = tmp_path / "data.csv"
+        csv_file.write_text("date,a,b\n2024-01-01,1,2\n2024-01-02,3,4\n2024-01-03,5,6\n")
+
+        catalog = tmp_path / "catalog.yaml"
+        catalog.write_text(f"""
+- my_name: alpha
+  source: localfile
+  symbol: a
+  path: {csv_file}
+- my_name: beta
+  source: localfile
+  symbol: b
+  path: {csv_file}
+""")
+
+        with Client(catalog=catalog, cache_enabled=False) as client:
+            df = client.get(
+                ["alpha", "beta"],
+                start="2024-01-01",
+                end="2024-01-03",
+                output_format="tall",
+            )
+
+        # Tall format: date, symbol, value columns
+        assert list(df.columns) == ["date", "symbol", "value"]
+        assert len(df) == 6  # 3 dates * 2 symbols
+        assert set(df["symbol"]) == {"alpha", "beta"}
+
+    def test_invalid_output_format_raises(self, tmp_path: Path) -> None:
+        """Invalid output_format raises ValueError."""
+        csv_file = tmp_path / "data.csv"
+        csv_file.write_text("date,a\n2024-01-01,1\n2024-01-02,2\n2024-01-03,3\n")
+
+        catalog = tmp_path / "catalog.yaml"
+        catalog.write_text(f"""
+- my_name: test
+  source: localfile
+  symbol: a
+  path: {csv_file}
+""")
+
+        with Client(catalog=catalog, cache_enabled=False) as client:
+            with pytest.raises(ValueError, match="output_format must be"):
+                client.get(["test"], start="2024-01-01", end="2024-01-03", output_format="invalid")

@@ -47,16 +47,6 @@ MACROBOND_AVAILABLE = _macrobond_available()
 GSQUANT_AVAILABLE = _gsquant_available()
 
 
-def pytest_addoption(parser: pytest.Parser) -> None:
-    """Add --run-private option for private series tests."""
-    parser.addoption(
-        "--run-private",
-        action="store_true",
-        default=False,
-        help="Run tests that require private/in-house series",
-    )
-
-
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Skip private tests unless --run-private is passed, and skip unavailable sources."""
     if not config.getoption("--run-private"):

@@ -1,4 +1,58 @@
-"""Cache with SQLite storage for time-series data."""
+"""
+Cache module for storing fetched time-series data.
+
+This module provides SQLite-based caching for metapyle data fetches.
+Data is stored per-symbol (not per-batch), enabling granular cache
+management and efficient partial cache hits.
+
+SQLite Schema
+-------------
+The cache uses two tables:
+
+**cache_entries**
+    Metadata about cached data entries.
+
+    - id: INTEGER PRIMARY KEY
+    - source: TEXT NOT NULL (e.g., "bloomberg", "macrobond")
+    - symbol: TEXT NOT NULL (e.g., "SPX Index", "usgdp")
+    - field: TEXT (e.g., "PX_LAST" for Bloomberg)
+    - path: TEXT (e.g., file path for localfile source)
+    - start_date: TEXT NOT NULL (ISO format YYYY-MM-DD)
+    - end_date: TEXT NOT NULL (ISO format YYYY-MM-DD)
+    - created_at: TEXT NOT NULL (ISO timestamp)
+    - UNIQUE(source, symbol, field, path, start_date, end_date)
+
+**cache_data**
+    Actual time-series data as serialized parquet bytes.
+
+    - entry_id: INTEGER PRIMARY KEY REFERENCES cache_entries(id)
+    - data: BLOB NOT NULL (parquet-serialized DataFrame)
+
+Cache Key Components
+--------------------
+Each cache entry is uniquely identified by:
+``(source, symbol, field, path, start_date, end_date)``
+
+Where ``field`` and ``path`` may be NULL/None.
+
+Batch Fetch Behavior
+--------------------
+When fetching multiple symbols from the same source:
+
+1. Check cache for each symbol individually
+2. Group uncached symbols by source
+3. Batch fetch per source (single API call)
+4. Split result and cache each symbol separately
+
+Example
+-------
+>>> from metapyle import Client
+>>> with Client(catalog="my_catalog.yaml") as client:
+...     # First fetch - calls API and caches
+...     df = client.fetch(["SPX", "VIX"], "2024-01-01", "2024-03-31")
+...     # Second fetch - served from cache
+...     df = client.fetch(["SPX", "VIX"], "2024-01-01", "2024-03-31")
+"""
 
 import io
 import logging

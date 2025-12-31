@@ -462,6 +462,31 @@ print(df)
 # ...
 ```
 
+### Long Format Output
+
+Use `output_format="long"` to get a stacked DataFrame with columns `date`, `symbol`, and `value`:
+
+```python
+df = client.get(
+    ["sp500_close", "nasdaq_close"],
+    start="2024-01-01",
+    end="2024-03-31",
+    output_format="long"
+)
+print(df)
+#         date        symbol     value
+# 0 2024-01-02   sp500_close   4742.83
+# 1 2024-01-02  nasdaq_close  14765.94
+# 2 2024-01-03   sp500_close   4704.81
+# 3 2024-01-03  nasdaq_close  14592.21
+# ...
+```
+
+This format is useful for:
+- Plotting with libraries like seaborn that expect tidy data
+- Database insertion
+- Pivoting and grouping operations
+
 ### Date Format
 
 Dates must be in **ISO format** (`YYYY-MM-DD`). The `end` parameter is optional and defaults to today:
@@ -685,11 +710,11 @@ df = client.get(["sp500_close"], start="2024-01-01", end="2024-12-31", use_cache
 Clear cached data when you need fresh data or want to free disk space:
 
 ```python
-# Clear cache for a specific symbol
-client.clear_cache(symbol="sp500_close")
-
 # Clear all cached data
 client.clear_cache()
+
+# Clear cache for a specific source
+client.clear_cache(source="bloomberg")
 ```
 
 ### Cache Behavior Notes

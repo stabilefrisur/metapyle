@@ -70,7 +70,35 @@ def _get_gsquant() -> dict[str, Any]:
 
 @register_source("gsquant")
 class GSQuantSource(BaseSource):
-    """Source adapter for Goldman Sachs Marquee data via gs-quant."""
+    """
+    Source adapter for Goldman Sachs Marquee data via gs-quant.
+
+    GsSession Detection
+    -------------------
+    This adapter detects GsSession availability at class instantiation.
+    Authentication can be provided via:
+
+    1. Environment variables: GS_CLIENT_ID and GS_CLIENT_SECRET
+    2. Explicit GsSession.use() call before creating Client
+
+    If gs_quant is not installed or GsSession is not authenticated,
+    the source will be unavailable and fetch() will raise FetchError.
+
+    Examples
+    --------
+    >>> # Via environment variables
+    >>> import os
+    >>> os.environ["GS_CLIENT_ID"] = "your-id"
+    >>> os.environ["GS_CLIENT_SECRET"] = "your-secret"
+    >>> from metapyle import Client
+    >>> client = Client(catalog="gsquant.yaml")
+
+    >>> # Via explicit session
+    >>> from gs_quant.session import GsSession
+    >>> GsSession.use(client_id="your-id", client_secret="your-secret")
+    >>> from metapyle import Client
+    >>> client = Client(catalog="gsquant.yaml")
+    """
 
     def fetch(
         self,

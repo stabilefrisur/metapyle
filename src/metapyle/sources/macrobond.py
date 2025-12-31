@@ -135,6 +135,12 @@ class MacrobondSource(BaseSource):
         # Normalize index name
         result.index.name = "date"
 
+        # Ensure UTC timezone
+        if result.index.tz is None:
+            result.index = result.index.tz_localize("UTC")
+        else:
+            result.index = result.index.tz_convert("UTC")
+
         if result.empty:
             logger.warning(
                 "fetch_no_data_in_range: symbols=%s, start=%s, end=%s",

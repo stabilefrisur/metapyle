@@ -204,6 +204,12 @@ class GSQuantSource(BaseSource):
         # Normalize index name
         result.index.name = "date"
 
+        # Ensure UTC timezone
+        if result.index.tz is None:
+            result.index = result.index.tz_localize("UTC")
+        else:
+            result.index = result.index.tz_convert("UTC")
+
         logger.info(
             "fetch_complete: columns=%s, rows=%d",
             list(result.columns),

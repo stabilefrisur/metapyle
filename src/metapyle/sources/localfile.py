@@ -132,6 +132,12 @@ class LocalFileSource(BaseSource):
         # Normalize index name
         df_filtered.index.name = "date"
 
+        # Ensure UTC timezone
+        if df_filtered.index.tz is None:
+            df_filtered.index = df_filtered.index.tz_localize("UTC")
+        else:
+            df_filtered.index = df_filtered.index.tz_convert("UTC")
+
         logger.info(
             "fetch_complete: path=%s, symbols=%s, rows=%d",
             path,

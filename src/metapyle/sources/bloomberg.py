@@ -127,6 +127,12 @@ class BloombergSource(BaseSource):
         # Normalize index name
         df.index.name = "date"
 
+        # Ensure UTC timezone
+        if df.index.tz is None:
+            df.index = df.index.tz_localize("UTC")
+        else:
+            df.index = df.index.tz_convert("UTC")
+
         logger.info(
             "fetch_complete: tickers=%s, fields=%s, rows=%d",
             tickers,

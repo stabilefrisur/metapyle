@@ -4,7 +4,7 @@ import logging
 
 import pandas as pd
 
-__all__ = ["align_to_frequency", "flatten_to_tall"]
+__all__ = ["align_to_frequency", "wide_to_long"]
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def align_to_frequency(
     return resampled
 
 
-def flatten_to_tall(
+def wide_to_long(
     df: pd.DataFrame,
     *,
     date_col: str = "date",
@@ -69,9 +69,9 @@ def flatten_to_tall(
     value_col: str = "value",
 ) -> pd.DataFrame:
     """
-    Convert wide DataFrame to tall/long format.
+    Convert wide DataFrame to long format.
 
-    Wide format has one column per symbol. Tall format has columns for
+    Wide format has one column per symbol. Long format has columns for
     date, symbol, and value - one row per observation.
 
     Parameters
@@ -88,7 +88,7 @@ def flatten_to_tall(
     Returns
     -------
     pd.DataFrame
-        Tall DataFrame with columns: [date_col, symbol_col, value_col].
+        Long DataFrame with columns: [date_col, symbol_col, value_col].
 
     Examples
     --------
@@ -97,15 +97,15 @@ def flatten_to_tall(
     ...     {"SPX": [100, 101], "VIX": [15, 16]},
     ...     index=pd.date_range("2024-01-01", periods=2, freq="D"),
     ... )
-    >>> tall = flatten_to_tall(df)
-    >>> tall
+    >>> long = wide_to_long(df)
+    >>> long
             date symbol  value
     0 2024-01-01    SPX  100.0
     1 2024-01-02    SPX  101.0
     2 2024-01-01    VIX   15.0
     3 2024-01-02    VIX   16.0
     """
-    logger.debug("flatten_to_tall: wide_shape=%s", df.shape)
+    logger.debug("wide_to_long: wide_shape=%s", df.shape)
 
     if df.empty:
         return pd.DataFrame(columns=[date_col, symbol_col, value_col])
@@ -128,5 +128,5 @@ def flatten_to_tall(
     # Sort by symbol then date
     tall = tall.sort_values([symbol_col, date_col]).reset_index(drop=True)
 
-    logger.debug("flatten_to_tall_complete: tall_shape=%s", tall.shape)
+    logger.debug("wide_to_long_complete: long_shape=%s", tall.shape)
     return tall

@@ -83,9 +83,9 @@ class Client:
             If omitted, data is returned as-is with a warning if indexes
             don't align.
         output_format : str, optional
-            Output format: "wide" (default) or "tall".
+            Output format: "wide" (default) or "long".
             Wide: DatetimeIndex, one column per symbol.
-            Tall: Columns [date, symbol, value], one row per observation.
+            Long: Columns [date, symbol, value], one row per observation.
         use_cache : bool, optional
             Whether to use cached data. Default is True.
 
@@ -102,7 +102,7 @@ class Client:
             If data retrieval fails for any symbol.
         ValueError
             If frequency is an invalid pandas frequency string, or
-            output_format is not "wide" or "tall".
+            output_format is not "wide" or "long".
         """
         # Default end to today if not specified
         if end is None:
@@ -219,13 +219,13 @@ class Client:
         # Assemble into wide DataFrame
         result = self._assemble_dataframe(dfs, symbols)
 
-        # Convert to tall format if requested
-        if output_format == "tall":
-            from metapyle.processing import flatten_to_tall
+        # Convert to long format if requested
+        if output_format == "long":
+            from metapyle.processing import wide_to_long
 
-            return flatten_to_tall(result)
+            return wide_to_long(result)
         elif output_format != "wide":
-            raise ValueError(f"output_format must be 'wide' or 'tall', got '{output_format}'")
+            raise ValueError(f"output_format must be 'wide' or 'long', got '{output_format}'")
 
         return result
 

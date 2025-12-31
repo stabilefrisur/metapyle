@@ -1,4 +1,4 @@
-"""Tests for flatten_to_tall function."""
+"""Tests for wide_to_long function."""
 
 from pathlib import Path
 
@@ -6,14 +6,14 @@ import pandas as pd
 import pytest
 
 from metapyle import Client
-from metapyle.processing import flatten_to_tall
+from metapyle.processing import wide_to_long
 
 
-class TestFlattenToTall:
-    """Tests for flatten_to_tall."""
+class TestWideToLong:
+    """Tests for wide_to_long."""
 
-    def test_basic_flatten(self) -> None:
-        """Basic wide to tall conversion."""
+    def test_basic_conversion(self) -> None:
+        """Basic wide to long conversion."""
         df = pd.DataFrame(
             {
                 "SPX": [100, 101, 102],
@@ -22,14 +22,14 @@ class TestFlattenToTall:
             index=pd.date_range("2024-01-01", periods=3, freq="D", tz="UTC"),
         )
 
-        result = flatten_to_tall(df)
+        result = wide_to_long(df)
 
         assert len(result) == 6  # 3 dates * 2 symbols
         assert list(result.columns) == ["date", "symbol", "value"]
         assert set(result["symbol"]) == {"SPX", "VIX"}
 
     def test_preserves_data_values(self) -> None:
-        """Values are correctly preserved in tall format."""
+        """Values are correctly preserved in long format."""
         df = pd.DataFrame(
             {
                 "A": [1.0, 2.0],
@@ -38,7 +38,7 @@ class TestFlattenToTall:
             index=pd.date_range("2024-01-01", periods=2, freq="D", tz="UTC"),
         )
 
-        result = flatten_to_tall(df)
+        result = wide_to_long(df)
 
         # Check specific values
         a_values = result[result["symbol"] == "A"]["value"].tolist()
@@ -54,7 +54,7 @@ class TestFlattenToTall:
             index=pd.date_range("2024-01-01", periods=2, freq="D", tz="UTC"),
         )
 
-        result = flatten_to_tall(
+        result = wide_to_long(
             df,
             date_col="timestamp",
             symbol_col="ticker",
@@ -64,10 +64,10 @@ class TestFlattenToTall:
         assert list(result.columns) == ["timestamp", "ticker", "price"]
 
     def test_empty_dataframe(self) -> None:
-        """Empty DataFrame returns empty tall DataFrame."""
+        """Empty DataFrame returns empty long DataFrame."""
         df = pd.DataFrame(index=pd.DatetimeIndex([], name="date"))
 
-        result = flatten_to_tall(df)
+        result = wide_to_long(df)
 
         assert len(result) == 0
         assert list(result.columns) == ["date", "symbol", "value"]
@@ -100,8 +100,8 @@ class TestClientOutputFormat:
         assert list(df.columns) == ["alpha", "beta"]
         assert len(df) == 3
 
-    def test_tall_format(self, tmp_path: Path) -> None:
-        """output_format='tall' returns melted DataFrame."""
+    def test_long_format(self, tmp_path: Path) -> None:
+        """output_format='long' returns melted DataFrame."""
         csv_file = tmp_path / "data.csv"
         csv_file.write_text("date,a,b\n2024-01-01,1,2\n2024-01-02,3,4\n2024-01-03,5,6\n")
 
@@ -122,10 +122,10 @@ class TestClientOutputFormat:
                 ["alpha", "beta"],
                 start="2024-01-01",
                 end="2024-01-03",
-                output_format="tall",
+                output_format="long",
             )
 
-        # Tall format: date, symbol, value columns
+        # Long format: date, symbol, value columns
         assert list(df.columns) == ["date", "symbol", "value"]
         assert len(df) == 6  # 3 dates * 2 symbols
         assert set(df["symbol"]) == {"alpha", "beta"}

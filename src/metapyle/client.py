@@ -161,7 +161,14 @@ class Client:
 
                 # Split result and cache each column
                 for entry in group_entries:
+                    # Try with field first (e.g., Bloomberg)
                     col_name = make_column_name(entry.symbol, entry.field)
+
+                    # Fallback to symbol-only if field column not found
+                    # (e.g., Macrobond ignores field parameter)
+                    if col_name not in result_df.columns:
+                        col_name = make_column_name(entry.symbol, None)
+
                     if col_name in result_df.columns:
                         col_df = result_df[[col_name]]
 
@@ -178,6 +185,14 @@ class Client:
                             )
 
                         dfs[entry.my_name] = col_df
+                    else:
+                        logger.warning(
+                            "column_not_found: my_name=%s, tried=%s and %s, available=%s",
+                            entry.my_name,
+                            make_column_name(entry.symbol, entry.field),
+                            make_column_name(entry.symbol, None),
+                            list(result_df.columns),
+                        )
 
         # Apply frequency alignment if requested
         if frequency is not None:

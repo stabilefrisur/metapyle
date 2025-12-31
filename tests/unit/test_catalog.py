@@ -171,6 +171,40 @@ class TestCatalogExportParams:
         assert entry.params == {"tenor": "3m", "location": "NYC"}
 
 
+class TestToYamlCleanOutput:
+    """Tests for to_yaml omitting None fields."""
+
+    def test_to_yaml_omits_none_fields(self, tmp_path: Path) -> None:
+        """to_yaml should not include fields with None values."""
+        # Entry with minimal fields (field, path, description, unit, params all None)
+        yaml_content = """
+- my_name: simple_entry
+  source: localfile
+  symbol: price
+"""
+        input_file = tmp_path / "input.yaml"
+        input_file.write_text(yaml_content)
+
+        catalog = Catalog.from_yaml(input_file)
+
+        output_file = tmp_path / "output.yaml"
+        catalog.to_yaml(output_file)
+
+        output_text = output_file.read_text()
+
+        # Should NOT contain None fields
+        assert "field:" not in output_text
+        assert "path:" not in output_text
+        assert "description:" not in output_text
+        assert "unit:" not in output_text
+        assert "params:" not in output_text
+
+        # Should contain required fields
+        assert "my_name: simple_entry" in output_text
+        assert "source: localfile" in output_text
+        assert "symbol: price" in output_text
+
+
 def test_catalog_entry_required_fields() -> None:
     """CatalogEntry requires my_name, source, symbol."""
     entry = CatalogEntry(

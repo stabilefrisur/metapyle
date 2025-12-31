@@ -82,10 +82,10 @@ class TestCatalogYamlParams:
 
 
 class TestCatalogCsvParams:
-    """Tests for CSV parsing - params not supported."""
+    """Tests for CSV parsing - params column without JSON."""
 
-    def test_from_csv_params_not_supported(self, tmp_path: Path) -> None:
-        """Catalog.from_csv ignores params (YAML-only feature)."""
+    def test_from_csv_no_params_column(self, tmp_path: Path) -> None:
+        """CSV without params column results in params=None."""
         csv_content = """my_name,source,symbol,field,path,description,unit
 test_series,bloomberg,SPX Index,PX_LAST,,,
 """
@@ -95,8 +95,49 @@ test_series,bloomberg,SPX Index,PX_LAST,,,
         catalog = Catalog.from_csv(csv_file)
         entry = catalog.get("test_series")
 
-        # params is always None from CSV
+        # params is None when column not present
         assert entry.params is None
+
+
+class TestFromCsvParams:
+    """Tests for CSV params column parsing."""
+
+    def test_from_csv_parses_params_json(self, tmp_path: Path) -> None:
+        """params column should be parsed as JSON dict."""
+        csv_file = tmp_path / "catalog.csv"
+        csv_file.write_text(
+            'my_name,source,symbol,params\n'
+            'test_entry,gsquant,AAPL,"{""interval"": ""1d"", ""limit"": 100}"\n'
+        )
+
+        catalog = Catalog.from_csv(str(csv_file))
+        entry = catalog.get("test_entry")
+
+        assert entry.params == {"interval": "1d", "limit": 100}
+
+    def test_from_csv_handles_empty_params(self, tmp_path: Path) -> None:
+        """Empty params column should result in None."""
+        csv_file = tmp_path / "catalog.csv"
+        csv_file.write_text(
+            'my_name,source,symbol,params\n'
+            'test_entry,localfile,value,\n'
+        )
+
+        catalog = Catalog.from_csv(str(csv_file))
+        entry = catalog.get("test_entry")
+
+        assert entry.params is None
+
+    def test_from_csv_invalid_json_raises_error(self, tmp_path: Path) -> None:
+        """Invalid JSON in params column should raise CatalogValidationError."""
+        csv_file = tmp_path / "catalog.csv"
+        csv_file.write_text(
+            'my_name,source,symbol,params\n'
+            'test_entry,gsquant,AAPL,{not valid json}\n'
+        )
+
+        with pytest.raises(CatalogValidationError, match="Invalid JSON in params"):
+            Catalog.from_csv(str(csv_file))
 
 
 class TestCatalogExportParams:

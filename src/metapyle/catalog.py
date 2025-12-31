@@ -1,6 +1,7 @@
 """Catalog system for mapping human-readable names to data sources."""
 
 import csv
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -194,6 +195,18 @@ class Catalog:
                         errors.append(f"Row {row_num}: Duplicate my_name '{my_name}'")
                         continue
 
+                    # Parse params as JSON if present
+                    params_value = row.get("params")
+                    params: dict[str, Any] | None = None
+                    if params_value and str(params_value).strip():
+                        try:
+                            params = json.loads(str(params_value))
+                        except json.JSONDecodeError:
+                            errors.append(
+                                f"Row {row_num}: Invalid JSON in params column for '{my_name}'"
+                            )
+                            continue
+
                     # Create entry (empty strings become None)
                     entry = CatalogEntry(
                         my_name=my_name,
@@ -203,6 +216,7 @@ class Catalog:
                         path=row.get("path") or None,
                         description=row.get("description") or None,
                         unit=row.get("unit") or None,
+                        params=params,
                     )
                     entries[my_name] = entry
 

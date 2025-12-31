@@ -244,6 +244,7 @@ def test_catalog_load_from_yaml(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
+  field: PX_LAST
   description: US GDP
 
 - my_name: SPX_CLOSE
@@ -274,6 +275,7 @@ def test_catalog_load_from_yaml_with_path_object(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
+  field: PX_LAST
 """
     yaml_file = tmp_path / "catalog.yaml"
     yaml_file.write_text(yaml_content)
@@ -291,11 +293,13 @@ def test_catalog_load_from_yaml_with_mixed_path_types(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
+  field: PX_LAST
 """
     yaml2 = """
 - my_name: SPX_CLOSE
   source: bloomberg
   symbol: SPX Index
+  field: PX_LAST
 """
     file1 = tmp_path / "catalog1.yaml"
     file2 = tmp_path / "catalog2.yaml"
@@ -328,6 +332,7 @@ def test_catalog_load_duplicate_names(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
+  field: PX_LAST
 
 - my_name: GDP_US
   source: localfile
@@ -346,11 +351,13 @@ def test_catalog_load_multiple_files(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
+  field: PX_LAST
 """
     yaml2 = """
 - my_name: SPX_CLOSE
   source: bloomberg
   symbol: SPX Index
+  field: PX_LAST
 """
     file1 = tmp_path / "catalog1.yaml"
     file2 = tmp_path / "catalog2.yaml"
@@ -370,6 +377,7 @@ def test_catalog_load_duplicate_across_files(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
+  field: PX_LAST
 """
     yaml2 = """
 - my_name: GDP_US
@@ -399,10 +407,12 @@ def test_catalog_list_names(tmp_path: Path) -> None:
 - my_name: GDP_US
   source: bloomberg
   symbol: GDP CUR$ Index
+  field: PX_LAST
 
 - my_name: SPX_CLOSE
   source: bloomberg
   symbol: SPX Index
+  field: PX_LAST
 """
     yaml_file = tmp_path / "catalog.yaml"
     yaml_file.write_text(yaml_content)
@@ -982,7 +992,7 @@ def test_catalog_csv_to_yaml_roundtrip(tmp_path: Path) -> None:
 sp500_close,bloomberg,SPX Index,PX_LAST,,S&P 500 closing price,points
 gdp_us,localfile,GDP_US,,/data/macro.csv,,
 uscpi,macrobond,uscpi,,,US Consumer Price Index,percent
-minimal,bloomberg,TEST Index,,,,
+minimal,bloomberg,TEST Index,PX_LAST,,,
 """
     csv_file = tmp_path / "original.csv"
     csv_file.write_text(csv_content)
@@ -1040,6 +1050,7 @@ def test_catalog_yaml_to_csv_roundtrip(tmp_path: Path) -> None:
 - my_name: minimal
   source: bloomberg
   symbol: TEST Index
+  field: PX_LAST
 """
     yaml_file = tmp_path / "original.yaml"
     yaml_file.write_text(yaml_content)

@@ -222,6 +222,12 @@ class Catalog:
             if field not in raw:
                 raise CatalogValidationError(f"Missing required field '{field}' in {source_file}")
 
+        # Bloomberg requires field
+        if raw["source"] == "bloomberg" and not raw.get("field"):
+            raise CatalogValidationError(
+                f"Bloomberg entry '{raw['my_name']}' requires 'field' (e.g., PX_LAST) in {source_file}"
+            )
+
         return CatalogEntry(
             my_name=raw["my_name"],
             source=raw["source"],

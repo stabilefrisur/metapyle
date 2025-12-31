@@ -660,6 +660,7 @@ def test_client_get_raw_bloomberg_returns_symbol_field(
 - my_name: dummy
   source: bloomberg
   symbol: dummy
+  field: PX_LAST
 """)
 
     client = Client(catalog=str(catalog_path), cache_enabled=False)

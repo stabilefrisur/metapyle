@@ -76,9 +76,9 @@ class TestBloombergFrequencyAlignment:
         assert not df.empty
         assert "sp500_close" in df.columns
         assert "us_cpi_yoy" in df.columns
-        # Month-end frequency should have ~6 rows for Jan-Jun
-        assert len(df) >= 5
-        assert len(df) <= 7
+        # Month-end frequency should have ~12 rows for 2024
+        assert len(df) >= 10
+        assert len(df) <= 14
 
 
 class TestBloombergRawAndMetadata:

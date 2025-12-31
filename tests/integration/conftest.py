@@ -14,8 +14,8 @@ MACROBOND_CATALOG = FIXTURES_DIR / "macrobond.yaml"
 COMBINED_CATALOG = FIXTURES_DIR / "combined.yaml"
 
 # Test date range (guaranteed to have data)
-TEST_START = "2023-01-01"
-TEST_END = "2024-06-30"
+TEST_START = "2023-12-31"
+TEST_END = "2024-12-31"
 
 
 def _macrobond_available() -> bool:

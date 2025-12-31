@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from metapyle import Client
 from metapyle.cache import Cache
 
 
@@ -34,6 +35,37 @@ class TestListCachedSymbols:
         # Should return dicts with source, symbol, field, path, start_date, end_date
         sources = {s["source"] for s in symbols}
         assert sources == {"bloomberg", "macrobond"}
+
+
+class TestClientListCached:
+    """Tests for Client.list_cached() wrapper."""
+
+    def test_list_cached_via_client(self, tmp_path: Path) -> None:
+        """Client.list_cached() returns cached entries."""
+        csv_file = tmp_path / "data.csv"
+        csv_file.write_text("date,value\n2024-01-01,100\n2024-01-02,101\n")
+
+        catalog = tmp_path / "catalog.yaml"
+        catalog.write_text(f"""
+- my_name: test_symbol
+  source: localfile
+  symbol: value
+  path: {csv_file}
+""")
+
+        cache_path = tmp_path / "cache.db"
+        with Client(catalog=catalog, cache_path=str(cache_path)) as client:
+            # Initially empty
+            assert client.list_cached() == []
+
+            # Fetch to populate cache
+            client.get(["test_symbol"], start="2024-01-01", end="2024-01-02")
+
+            # Now should have one entry
+            cached = client.list_cached()
+            assert len(cached) == 1
+            assert cached[0]["source"] == "localfile"
+            assert cached[0]["symbol"] == "value"
 
 
 class TestClearSymbol:

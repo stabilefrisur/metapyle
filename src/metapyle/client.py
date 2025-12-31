@@ -344,6 +344,25 @@ class Client:
             self._cache.clear()
             logger.info("cache_cleared: all")
 
+    def list_cached(self) -> list[dict[str, str | None]]:
+        """
+        List all cached entries.
+
+        Returns
+        -------
+        list[dict[str, str | None]]
+            List of dicts with keys: source, symbol, field, path, start_date, end_date.
+
+        Examples
+        --------
+        >>> with Client(catalog="catalog.yaml") as client:
+        ...     df = client.get(["sp500"], start="2024-01-01", end="2024-06-30")
+        ...     for entry in client.list_cached():
+        ...         print(f"{entry['source']}/{entry['symbol']}")
+        bloomberg/SPX Index
+        """
+        return self._cache.list_cached_symbols()
+
     def get_metadata(self, symbol: str) -> dict[str, Any]:
         """
         Retrieve metadata for a catalog symbol.

@@ -148,6 +148,9 @@ GS Quant provides access to Goldman Sachs Marquee datasets. Requires an authenti
 
 ```python
 from gs_quant.data import Dataset
+from gs_quant.session import GsSession
+
+GsSession.use()
 
 ds = Dataset("FXIMPLIEDVOL")
 df = ds.get_data("2024-01-01", "2024-01-31", bbid=["EURUSD"])

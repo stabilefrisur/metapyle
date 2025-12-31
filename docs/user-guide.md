@@ -635,14 +635,31 @@ You can customize the cache location:
 client = Client(catalog="catalog.yaml", cache_path="/path/to/my_cache.db")
 ```
 
-Or via environment variable:
+**PowerShell** (environment variable):
 
-```bash
-# Linux/macOS
-export METAPYLE_CACHE_PATH=/path/to/my_cache.db
+```powershell
+$env:METAPYLE_CACHE_PATH = "C:\path\to\my_cache.db"
+```
 
-# Windows
-set METAPYLE_CACHE_PATH=C:\path\to\my_cache.db
+**VS Code settings.json** (workspace or user):
+```json
+{
+    "terminal.integrated.env.windows": {
+        "METAPYLE_CACHE_PATH": "C:\\path\\to\\my_cache.db"
+    },
+    "terminal.integrated.env.linux": {
+        "METAPYLE_CACHE_PATH": "/path/to/my_cache.db"
+    }
+}
+```
+
+**In Python script:**
+```python
+import os
+os.environ["METAPYLE_CACHE_PATH"] = "/path/to/my_cache.db"
+
+from metapyle import Client
+client = Client(catalog="catalog.yaml")  # Uses env var
 ```
 
 The `cache_path` parameter takes precedence over the environment variable.

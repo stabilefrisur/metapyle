@@ -86,8 +86,8 @@ print("=" * 50)
 # Uncomment to test GS Quant connection
 # Requires: Authenticated GsSession (call GsSession.use() first)
 #
-# from gs_quant.session import GsSession, Environment
-# GsSession.use(Environment.PROD, client_id="YOUR_ID", client_secret="YOUR_SECRET")
+# from gs_quant.session import GsSession
+# GsSession.use()
 #
 # test_source("gsquant", """
 # - my_name: gsquant

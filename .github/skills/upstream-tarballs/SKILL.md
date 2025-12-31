@@ -42,7 +42,7 @@ tar -xzf pkg-1.1.0.tar.gz --strip-components=1
 git add -A && git commit -m "upstream: import pkg v1.1.0"
 git tag upstream/v1.1.0
 git checkout main
-git merge upstream -m "merge: upstream v1.1.0 into main"
+git merge upstream --allow-unrelated-histories -m "merge: upstream v1.1.0 into main"
 pytest tests/
 
 # === CONFLICT RESOLUTION ===

@@ -37,7 +37,7 @@ You are an expert at maintaining forks of Python packages when GitHub access is 
 2. Clear: `git rm -rf . && git clean -fd`
 3. Download and extract new version
 4. Commit and tag
-5. Merge into `main`: `git merge upstream -m "merge: upstream vX.Y.Z into main"`
+5. Merge into `main`: `git merge upstream --allow-unrelated-histories -m "merge: upstream vX.Y.Z into main"`
 6. Resolve conflicts if any (categorize, propose with rationale, test each)
 7. Run `pytest tests/`
 8. Bump version in pyproject.toml

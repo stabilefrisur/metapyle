@@ -459,6 +459,102 @@ class Cache:
             self._conn = None
             logger.debug("cache_closed")
 
+    def list_cached_symbols(self) -> list[dict[str, str | None]]:
+        """
+        List all cached entries.
+
+        Returns
+        -------
+        list[dict[str, str | None]]
+            List of dicts with keys: source, symbol, field, path, start_date, end_date.
+        """
+        if not self._enabled or self._conn is None:
+            return []
+
+        cursor = self._conn.execute(
+            """
+            SELECT source, symbol, field, path, start_date, end_date
+            FROM cache_entries
+            ORDER BY source, symbol
+            """
+        )
+        return [
+            {
+                "source": row[0],
+                "symbol": row[1],
+                "field": row[2],
+                "path": row[3],
+                "start_date": row[4],
+                "end_date": row[5],
+            }
+            for row in cursor.fetchall()
+        ]
+
+    def clear_symbol(
+        self,
+        source: str,
+        symbol: str,
+        field: str | None,
+        path: str | None,
+    ) -> int:
+        """
+        Clear all cache entries for a specific symbol.
+
+        Parameters
+        ----------
+        source : str
+            Data source name.
+        symbol : str
+            Symbol identifier.
+        field : str | None
+            Field name (can be None).
+        path : str | None
+            File path (can be None).
+
+        Returns
+        -------
+        int
+            Number of entries cleared.
+        """
+        if not self._enabled or self._conn is None:
+            return 0
+
+        # Delete data first (foreign key)
+        self._conn.execute(
+            """
+            DELETE FROM cache_data
+            WHERE entry_id IN (
+                SELECT id FROM cache_entries
+                WHERE source = ? AND symbol = ?
+                AND (field IS ? OR (field IS NULL AND ? IS NULL))
+                AND (path IS ? OR (path IS NULL AND ? IS NULL))
+            )
+            """,
+            (source, symbol, field, field, path, path),
+        )
+
+        cursor = self._conn.execute(
+            """
+            DELETE FROM cache_entries
+            WHERE source = ? AND symbol = ?
+            AND (field IS ? OR (field IS NULL AND ? IS NULL))
+            AND (path IS ? OR (path IS NULL AND ? IS NULL))
+            """,
+            (source, symbol, field, field, path, path),
+        )
+
+        count = cursor.rowcount
+        self._conn.commit()
+
+        logger.info(
+            "cache_cleared: source=%s, symbol=%s, field=%s, count=%d",
+            source,
+            symbol,
+            field,
+            count,
+        )
+        return count
+
     def _delete_entry(
         self,
         source: str,

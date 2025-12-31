@@ -1,7 +1,5 @@
 """Tests for column name fallback when source ignores field."""
 
-import pandas as pd
-import pytest
 
 from metapyle.sources.base import make_column_name
 
@@ -21,7 +19,7 @@ class TestColumnLookupFallback:
 
     def test_client_extracts_column_with_fallback(self, tmp_path) -> None:
         """Client should find column even when source ignores field.
-        
+
         This simulates Macrobond behavior where field is in catalog
         but source returns column named just by symbol.
         """

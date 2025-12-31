@@ -1,7 +1,5 @@
 """Tests for consistent date index naming across sources."""
 
-import pandas as pd
-import pytest
 
 
 class TestIndexNameConsistency:
@@ -9,8 +7,8 @@ class TestIndexNameConsistency:
 
     def test_localfile_index_name(self, tmp_path):
         """LocalFile source should return index named 'date' regardless of source column."""
-        from metapyle.sources.localfile import LocalFileSource
         from metapyle.sources.base import FetchRequest
+        from metapyle.sources.localfile import LocalFileSource
 
         # Use 'timestamp' column to verify normalization to 'date'
         csv_file = tmp_path / "data.csv"
@@ -24,8 +22,8 @@ class TestIndexNameConsistency:
 
     def test_localfile_index_timezone(self, tmp_path):
         """LocalFile source should return UTC timezone-aware index."""
-        from metapyle.sources.localfile import LocalFileSource
         from metapyle.sources.base import FetchRequest
+        from metapyle.sources.localfile import LocalFileSource
 
         csv_file = tmp_path / "data.csv"
         csv_file.write_text("date,value\n2024-01-01,100\n2024-01-02,101\n")

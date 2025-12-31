@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
 from metapyle.cache import Cache
 
@@ -14,13 +13,13 @@ class TestListCachedSymbols:
     def test_list_cached_symbols_empty(self, tmp_path: Path) -> None:
         """Empty cache returns empty list."""
         cache = Cache(path=str(tmp_path / "cache.db"))
-        
+
         assert cache.list_cached_symbols() == []
 
     def test_list_cached_symbols_returns_entries(self, tmp_path: Path) -> None:
         """Returns list of cached symbol metadata."""
         cache = Cache(path=str(tmp_path / "cache.db"))
-        
+
         # Add some data
         df = pd.DataFrame(
             {"value": [1, 2]},
@@ -28,9 +27,9 @@ class TestListCachedSymbols:
         )
         cache.put("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
         cache.put("macrobond", "usgdp", None, None, "2024-01-01", "2024-01-02", df)
-        
+
         symbols = cache.list_cached_symbols()
-        
+
         assert len(symbols) == 2
         # Should return dicts with source, symbol, field, path, start_date, end_date
         sources = {s["source"] for s in symbols}
@@ -43,21 +42,21 @@ class TestClearSymbol:
     def test_clear_symbol_removes_entry(self, tmp_path: Path) -> None:
         """clear_symbol removes specific entry from cache."""
         cache = Cache(path=str(tmp_path / "cache.db"))
-        
+
         df = pd.DataFrame(
             {"value": [1, 2]},
             index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
         )
         cache.put("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
         cache.put("bloomberg", "VIX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
-        
+
         # Clear one symbol
         cache.clear_symbol("bloomberg", "SPX Index", "PX_LAST", None)
-        
+
         # Should be gone
         result = cache.get("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02")
         assert result is None
-        
+
         # Other symbol should still exist
         result = cache.get("bloomberg", "VIX Index", "PX_LAST", None, "2024-01-01", "2024-01-02")
         assert result is not None
@@ -65,16 +64,16 @@ class TestClearSymbol:
     def test_clear_symbol_returns_count(self, tmp_path: Path) -> None:
         """clear_symbol returns number of entries cleared."""
         cache = Cache(path=str(tmp_path / "cache.db"))
-        
+
         df = pd.DataFrame(
             {"value": [1, 2]},
             index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
         )
         cache.put("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
-        
+
         count = cache.clear_symbol("bloomberg", "SPX Index", "PX_LAST", None)
         assert count == 1
-        
+
         # Clearing again should return 0
         count = cache.clear_symbol("bloomberg", "SPX Index", "PX_LAST", None)
         assert count == 0

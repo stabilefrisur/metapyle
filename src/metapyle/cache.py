@@ -435,7 +435,7 @@ class Cache:
             self._conn = None
             logger.debug("cache_closed")
 
-    def list_cached_symbols(self) -> list[dict[str, str | None]]:
+    def list_cached_entries(self) -> list[dict[str, str | None]]:
         """
         List all cached entries.
 

@@ -8,17 +8,17 @@ from metapyle import Client
 from metapyle.cache import Cache
 
 
-class TestListCachedSymbols:
-    """Tests for list_cached_symbols method."""
+class TestListCachedEntries:
+    """Tests for list_cached_entries method."""
 
-    def test_list_cached_symbols_empty(self, tmp_path: Path) -> None:
+    def test_list_cached_entries_empty(self, tmp_path: Path) -> None:
         """Empty cache returns empty list."""
         cache = Cache(path=str(tmp_path / "cache.db"))
 
-        assert cache.list_cached_symbols() == []
+        assert cache.list_cached_entries() == []
 
-    def test_list_cached_symbols_returns_entries(self, tmp_path: Path) -> None:
-        """Returns list of cached symbol metadata."""
+    def test_list_cached_entries_returns_entries(self, tmp_path: Path) -> None:
+        """Returns list of cached entry metadata."""
         cache = Cache(path=str(tmp_path / "cache.db"))
 
         # Add some data
@@ -29,7 +29,7 @@ class TestListCachedSymbols:
         cache.put("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
         cache.put("macrobond", "usgdp", None, None, "2024-01-01", "2024-01-02", df)
 
-        symbols = cache.list_cached_symbols()
+        symbols = cache.list_cached_entries()
 
         assert len(symbols) == 2
         # Should return dicts with source, symbol, field, path, start_date, end_date

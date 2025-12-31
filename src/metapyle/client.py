@@ -359,7 +359,7 @@ class Client:
         ...         print(f"{entry['source']}/{entry['symbol']}")
         bloomberg/SPX Index
         """
-        return self._cache.list_cached_symbols()
+        return self._cache.list_cached_entries()
 
     def get_metadata(self, symbol: str) -> dict[str, Any]:
         """

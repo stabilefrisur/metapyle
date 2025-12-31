@@ -490,7 +490,7 @@ class Cache:
             for row in cursor.fetchall()
         ]
 
-    def clear_symbol(
+    def clear_entry(
         self,
         source: str,
         symbol: str,
@@ -498,7 +498,9 @@ class Cache:
         path: str | None,
     ) -> int:
         """
-        Clear all cache entries for a specific symbol.
+        Clear a specific cache entry.
+
+        An entry is uniquely identified by (source, symbol, field, path).
 
         Parameters
         ----------
@@ -514,7 +516,7 @@ class Cache:
         Returns
         -------
         int
-            Number of entries cleared.
+            Number of entries cleared (0 or 1).
         """
         if not self._enabled or self._conn is None:
             return 0

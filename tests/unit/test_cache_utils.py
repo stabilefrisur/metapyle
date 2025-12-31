@@ -68,11 +68,11 @@ class TestClientListCached:
             assert cached[0]["symbol"] == "value"
 
 
-class TestClearSymbol:
-    """Tests for clear_symbol method."""
+class TestClearEntry:
+    """Tests for clear_entry method."""
 
-    def test_clear_symbol_removes_entry(self, tmp_path: Path) -> None:
-        """clear_symbol removes specific entry from cache."""
+    def test_clear_entry_removes_entry(self, tmp_path: Path) -> None:
+        """clear_entry removes specific entry from cache."""
         cache = Cache(path=str(tmp_path / "cache.db"))
 
         df = pd.DataFrame(
@@ -82,8 +82,8 @@ class TestClearSymbol:
         cache.put("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
         cache.put("bloomberg", "VIX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
 
-        # Clear one symbol
-        cache.clear_symbol("bloomberg", "SPX Index", "PX_LAST", None)
+        # Clear one entry
+        cache.clear_entry("bloomberg", "SPX Index", "PX_LAST", None)
 
         # Should be gone
         result = cache.get("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02")
@@ -93,8 +93,8 @@ class TestClearSymbol:
         result = cache.get("bloomberg", "VIX Index", "PX_LAST", None, "2024-01-01", "2024-01-02")
         assert result is not None
 
-    def test_clear_symbol_returns_count(self, tmp_path: Path) -> None:
-        """clear_symbol returns number of entries cleared."""
+    def test_clear_entry_returns_count(self, tmp_path: Path) -> None:
+        """clear_entry returns number of entries cleared."""
         cache = Cache(path=str(tmp_path / "cache.db"))
 
         df = pd.DataFrame(
@@ -103,9 +103,9 @@ class TestClearSymbol:
         )
         cache.put("bloomberg", "SPX Index", "PX_LAST", None, "2024-01-01", "2024-01-02", df)
 
-        count = cache.clear_symbol("bloomberg", "SPX Index", "PX_LAST", None)
+        count = cache.clear_entry("bloomberg", "SPX Index", "PX_LAST", None)
         assert count == 1
 
         # Clearing again should return 0
-        count = cache.clear_symbol("bloomberg", "SPX Index", "PX_LAST", None)
+        count = cache.clear_entry("bloomberg", "SPX Index", "PX_LAST", None)
         assert count == 0

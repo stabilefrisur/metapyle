@@ -124,6 +124,9 @@ class BloombergSource(BaseSource):
         requested_cols = [make_column_name(req.symbol, req.field or "PX_LAST") for req in requests]
         df = df[[c for c in requested_cols if c in df.columns]]
 
+        # Normalize index name
+        df.index.name = "date"
+
         logger.info(
             "fetch_complete: tickers=%s, fields=%s, rows=%d",
             tickers,

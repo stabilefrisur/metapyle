@@ -129,6 +129,9 @@ class LocalFileSource(BaseSource):
             )
             raise NoDataError(f"No data in date range {start} to {end}: {path}")
 
+        # Normalize index name
+        df_filtered.index.name = "date"
+
         logger.info(
             "fetch_complete: path=%s, symbols=%s, rows=%d",
             path,

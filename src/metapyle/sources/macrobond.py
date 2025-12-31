@@ -132,6 +132,9 @@ class MacrobondSource(BaseSource):
         mask = (result.index >= start_dt) & (result.index <= end_dt)
         result = result.loc[mask]
 
+        # Normalize index name
+        result.index.name = "date"
+
         if result.empty:
             logger.warning(
                 "fetch_no_data_in_range: symbols=%s, start=%s, end=%s",

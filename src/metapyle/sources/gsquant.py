@@ -201,6 +201,9 @@ class GSQuantSource(BaseSource):
         for df in result_dfs[1:]:
             result = result.join(df, how="outer")
 
+        # Normalize index name
+        result.index.name = "date"
+
         logger.info(
             "fetch_complete: columns=%s, rows=%d",
             list(result.columns),

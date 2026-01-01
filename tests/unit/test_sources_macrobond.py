@@ -164,6 +164,30 @@ class TestMacrobondSourceGetMetadata:
                 source.get_metadata("usgdp")
 
 
+class TestMacrobondSourceKwargs:
+    """Tests for **kwargs handling in MacrobondSource."""
+
+    def test_fetch_accepts_kwargs(self, source: MacrobondSource) -> None:
+        """MacrobondSource.fetch() accepts **kwargs without error."""
+        mock_series = _make_mock_series(
+            "usgdp",
+            ["2024-01-01", "2024-01-02"],
+            [100.0, 101.0],
+        )
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_series.return_value = [mock_series]
+            mock_get_mda.return_value = mock_mda
+
+            requests = [FetchRequest(symbol="usgdp")]
+            # Pass kwargs - should be accepted (unified=False uses existing behavior)
+            df = source.fetch(requests, "2024-01-01", "2024-01-02", unified=False, currency="EUR")
+
+            assert list(df.columns) == ["usgdp"]
+            mock_mda.get_series.assert_called_once_with(["usgdp"])
+
+
 class TestMacrobondSourceIsRegistered:
     """Tests for source registration."""
 

@@ -880,12 +880,82 @@ class TestClientUnifiedCache:
     """Tests for cache behavior with unified=True."""
 
     def test_unified_bypasses_cache_for_macrobond(self, tmp_path: Path) -> None:
-        """When unified=True, macrobond entries skip cache."""
-        # Create catalog with macrobond entry (using mock_kwargs_capture as proxy)
-        yaml_content = """
+        """When unified=True and source=macrobond, entries skip cache."""
+        # Register a mock "macrobond" source for this test
+        from metapyle.sources.base import _global_registry
+
+        @register_source("test_macrobond_unified")
+        class TestMacrobondSource(BaseSource):
+            """Test source registered as macrobond for cache bypass testing."""
+
+            def fetch(
+                self,
+                requests: Sequence[FetchRequest],
+                start: str,
+                end: str,
+                **kwargs: Any,
+            ) -> pd.DataFrame:
+                _captured_kwargs.clear()
+                _captured_kwargs.update(kwargs)
+                dates = pd.date_range(start, end, freq="D")
+                result = pd.DataFrame(index=dates)
+                for req in requests:
+                    result[req.symbol] = list(range(len(dates)))
+                return result
+
+            def get_metadata(self, symbol: str) -> dict[str, Any]:
+                return {"symbol": symbol}
+
+        # Temporarily register as "macrobond" (store the class, not an instance)
+        original_source = _global_registry._sources.get("macrobond")
+        original_instance = _global_registry._instances.get("macrobond")
+        _global_registry._sources["macrobond"] = TestMacrobondSource
+        _global_registry._instances.pop("macrobond", None)  # Clear cached instance
+
+        try:
+            yaml_content = """
 - my_name: test_mb
-  source: mock_kwargs_capture
+  source: macrobond
   symbol: TEST_MB
+"""
+            yaml_file = tmp_path / "catalog.yaml"
+            yaml_file.write_text(yaml_content)
+
+            cache_path = tmp_path / "cache.db"
+            client = Client(catalog=yaml_file, cache_path=str(cache_path), cache_enabled=True)
+
+            # First fetch with unified=True
+            client.get(["test_mb"], start="2024-01-01", end="2024-01-02", unified=True)
+
+            # unified=True should trigger fetch (not use cache)
+            assert _captured_kwargs.get("unified") is True
+
+            # Clear captured kwargs
+            _captured_kwargs.clear()
+
+            # Second fetch with unified=True should NOT hit cache - should fetch again
+            client.get(["test_mb"], start="2024-01-01", end="2024-01-02", unified=True)
+
+            # Should have fetched again (kwargs captured = fetch happened)
+            assert _captured_kwargs.get("unified") is True
+
+            client.close()
+        finally:
+            # Restore original macrobond source
+            _global_registry._instances.pop("macrobond", None)
+            if original_source is not None:
+                _global_registry._sources["macrobond"] = original_source
+            else:
+                _global_registry._sources.pop("macrobond", None)
+            if original_instance is not None:
+                _global_registry._instances["macrobond"] = original_instance
+
+    def test_unified_true_uses_cache_for_non_macrobond(self, tmp_path: Path) -> None:
+        """When unified=True but source is not macrobond, cache still works."""
+        yaml_content = """
+- my_name: test_other
+  source: mock_kwargs_capture
+  symbol: TEST_OTHER
 """
         yaml_file = tmp_path / "catalog.yaml"
         yaml_file.write_text(yaml_content)
@@ -893,20 +963,18 @@ class TestClientUnifiedCache:
         cache_path = tmp_path / "cache.db"
         client = Client(catalog=yaml_file, cache_path=str(cache_path), cache_enabled=True)
 
-        # First fetch with unified=True
-        client.get(["test_mb"], start="2024-01-01", end="2024-01-02", unified=True)
-
-        # unified=True should trigger fetch (not use cache)
+        # First fetch with unified=True (populates cache for non-macrobond)
+        client.get(["test_other"], start="2024-01-01", end="2024-01-02", unified=True)
         assert _captured_kwargs.get("unified") is True
 
         # Clear captured kwargs
         _captured_kwargs.clear()
 
-        # Second fetch with unified=True should NOT hit cache - should fetch again
-        client.get(["test_mb"], start="2024-01-01", end="2024-01-02", unified=True)
+        # Second fetch should use cache (no fetch happens)
+        client.get(["test_other"], start="2024-01-01", end="2024-01-02", unified=True)
 
-        # Should have fetched again (kwargs captured = fetch happened)
-        assert _captured_kwargs.get("unified") is True
+        # If cache was used, no fetch happened, so kwargs should be empty
+        assert _captured_kwargs == {}
 
         client.close()
 

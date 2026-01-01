@@ -149,8 +149,8 @@ class Client:
         uncached_entries: list[CatalogEntry] = []
 
         for entry in entries:
-            # Skip cache for unified requests (server-side transformation)
-            if unified:
+            # Skip cache for unified macrobond requests (server-side transformation)
+            if unified and entry.source == "macrobond":
                 logger.debug(
                     "cache_bypass_unified: symbol=%s",
                     entry.my_name,
@@ -215,8 +215,9 @@ class Client:
                     if col_name in result_df.columns:
                         col_df = result_df[[col_name]]
 
-                        # Cache the individual column (skip for unified - server-side transform)
-                        if use_cache and not unified:
+                        # Cache the column (skip for unified macrobond - server-side transform)
+                        skip_cache = unified and entry.source == "macrobond"
+                        if use_cache and not skip_cache:
                             self._cache.put(
                                 source=entry.source,
                                 symbol=entry.symbol,

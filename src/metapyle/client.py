@@ -90,6 +90,16 @@ class Client:
             Long: Columns [date, symbol, value], one row per observation.
         use_cache : bool, optional
             Whether to use cached data. Default is True.
+        unified : bool, default False
+            If True, use Macrobond's get_unified_series() for server-side alignment.
+            Only affects macrobond sources; other sources ignore this parameter.
+            When True, cache is bypassed since the transformation depends on all
+            symbols together.
+        **kwargs : Any
+            Additional keyword arguments passed to source adapters. For macrobond
+            with unified=True, supports: frequency (SeriesFrequency), weekdays
+            (SeriesWeekdays), calendar_merge_mode (CalendarMergeMode), currency
+            (str), start_point/end_point (StartOrEndPoint). Unused by other sources.
 
         Returns
         -------
@@ -105,6 +115,20 @@ class Client:
         ValueError
             If frequency is an invalid pandas frequency string, or
             output_format is not "wide" or "long".
+
+        Examples
+        --------
+        >>> client = Client(catalog="catalog.yaml")
+        >>> df = client.get(["GDP_US", "CPI_EU"], start="2020-01-01", end="2024-12-31")
+
+        >>> # Unified series with custom frequency
+        >>> df = client.get(
+        ...     ["gdp_us", "gdp_eu"],
+        ...     start="2020-01-01",
+        ...     end="2024-12-31",
+        ...     unified=True,
+        ...     frequency=SeriesFrequency.QUARTERLY,
+        ... )
         """
         # Default end to today if not specified
         if end is None:

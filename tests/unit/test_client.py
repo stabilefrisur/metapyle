@@ -874,3 +874,65 @@ class TestClientKwargsPassthrough:
         assert _captured_kwargs.get("currency") == "EUR"
 
         client.close()
+
+
+class TestClientUnifiedCache:
+    """Tests for cache behavior with unified=True."""
+
+    def test_unified_bypasses_cache_for_macrobond(self, tmp_path: Path) -> None:
+        """When unified=True, macrobond entries skip cache."""
+        # Create catalog with macrobond entry (using mock_kwargs_capture as proxy)
+        yaml_content = """
+- my_name: test_mb
+  source: mock_kwargs_capture
+  symbol: TEST_MB
+"""
+        yaml_file = tmp_path / "catalog.yaml"
+        yaml_file.write_text(yaml_content)
+
+        cache_path = tmp_path / "cache.db"
+        client = Client(catalog=yaml_file, cache_path=str(cache_path), cache_enabled=True)
+
+        # First fetch with unified=True
+        client.get(["test_mb"], start="2024-01-01", end="2024-01-02", unified=True)
+
+        # unified=True should trigger fetch (not use cache)
+        assert _captured_kwargs.get("unified") is True
+
+        # Clear captured kwargs
+        _captured_kwargs.clear()
+
+        # Second fetch with unified=True should NOT hit cache - should fetch again
+        client.get(["test_mb"], start="2024-01-01", end="2024-01-02", unified=True)
+
+        # Should have fetched again (kwargs captured = fetch happened)
+        assert _captured_kwargs.get("unified") is True
+
+        client.close()
+
+    def test_unified_false_uses_cache(self, tmp_path: Path) -> None:
+        """When unified=False, normal caching applies."""
+        yaml_content = """
+- my_name: test_cached
+  source: mock_kwargs_capture
+  symbol: TEST_CACHED
+"""
+        yaml_file = tmp_path / "catalog.yaml"
+        yaml_file.write_text(yaml_content)
+
+        cache_path = tmp_path / "cache.db"
+        client = Client(catalog=yaml_file, cache_path=str(cache_path), cache_enabled=True)
+
+        # First fetch (populates cache)
+        client.get(["test_cached"], start="2024-01-01", end="2024-01-02", unified=False)
+
+        # Clear captured kwargs
+        _captured_kwargs.clear()
+
+        # Second fetch should use cache (no fetch - kwargs not captured)
+        client.get(["test_cached"], start="2024-01-01", end="2024-01-02", unified=False)
+
+        # If cache was used, no fetch happened, so kwargs should be empty
+        assert _captured_kwargs == {}
+
+        client.close()

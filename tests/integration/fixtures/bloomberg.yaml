@@ -14,11 +14,13 @@
 - my_name: us_gdp
   source: bloomberg
   symbol: GDP CUR$ Index
+  field: PX_LAST
   description: US GDP in current dollars
   unit: USD billions
 
 - my_name: us_cpi_yoy
   source: bloomberg
   symbol: CPI YOY Index
+  field: PX_LAST
   description: US CPI year-over-year change
   unit: percent

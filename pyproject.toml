@@ -1,6 +1,6 @@
 [project]
 name = "metapyle"
-version = "0.1.3"
+version = "0.1.4"
 description = "Early-stage unified interface for querying financial time-series data"
 readme = "README.md"
 license = {file = "LICENSE"}

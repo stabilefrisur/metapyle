@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-01-01
+
 ### Added
 
 - Macrobond unified series support via `unified=True` parameter for server-side frequency and currency alignment
@@ -101,7 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive type hints throughout (Python 3.12+)
 - User guide documentation
 
-[Unreleased]: https://github.com/stabilefrisur/metapyle/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/stabilefrisur/metapyle/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/stabilefrisur/metapyle/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/stabilefrisur/metapyle/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/stabilefrisur/metapyle/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/stabilefrisur/metapyle/compare/v0.1.0...v0.1.1

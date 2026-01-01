@@ -66,6 +66,8 @@ class Client:
         frequency: str | None = None,
         output_format: str = "wide",
         use_cache: bool = True,
+        unified: bool = False,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """
         Fetch time-series data for multiple catalog names.
@@ -88,6 +90,16 @@ class Client:
             Long: Columns [date, symbol, value], one row per observation.
         use_cache : bool, optional
             Whether to use cached data. Default is True.
+        unified : bool, default False
+            If True, use Macrobond's get_unified_series() for server-side alignment.
+            Only affects macrobond sources; other sources ignore this parameter.
+            When True, cache is bypassed since the transformation depends on all
+            symbols together.
+        **kwargs : Any
+            Additional keyword arguments passed to source adapters. For macrobond
+            with unified=True, supports: frequency (SeriesFrequency), weekdays
+            (SeriesWeekdays), calendar_merge_mode (CalendarMergeMode), currency
+            (str), start_point/end_point (StartOrEndPoint). Unused by other sources.
 
         Returns
         -------
@@ -103,6 +115,20 @@ class Client:
         ValueError
             If frequency is an invalid pandas frequency string, or
             output_format is not "wide" or "long".
+
+        Examples
+        --------
+        >>> client = Client(catalog="catalog.yaml")
+        >>> df = client.get(["GDP_US", "CPI_EU"], start="2020-01-01", end="2024-12-31")
+
+        >>> # Unified series with custom frequency
+        >>> df = client.get(
+        ...     ["gdp_us", "gdp_eu"],
+        ...     start="2020-01-01",
+        ...     end="2024-12-31",
+        ...     unified=True,
+        ...     frequency=SeriesFrequency.QUARTERLY,
+        ... )
         """
         # Default end to today if not specified
         if end is None:
@@ -123,6 +149,15 @@ class Client:
         uncached_entries: list[CatalogEntry] = []
 
         for entry in entries:
+            # Skip cache for unified macrobond requests (server-side transformation)
+            if unified and entry.source == "macrobond":
+                logger.debug(
+                    "cache_bypass_unified: symbol=%s",
+                    entry.my_name,
+                )
+                uncached_entries.append(entry)
+                continue
+
             if use_cache:
                 cached = self._cache.get(
                     source=entry.source,
@@ -163,7 +198,9 @@ class Client:
                 ]
 
                 # Batch fetch from source
-                result_df = self._fetch_from_source(source_name, requests, start, end)
+                result_df = self._fetch_from_source(
+                    source_name, requests, start, end, unified=unified, **kwargs
+                )
 
                 # Split result and cache each column
                 for entry in group_entries:
@@ -178,8 +215,9 @@ class Client:
                     if col_name in result_df.columns:
                         col_df = result_df[[col_name]]
 
-                        # Cache the individual column
-                        if use_cache:
+                        # Cache the column (skip for unified macrobond - server-side transform)
+                        skip_cache = unified and entry.source == "macrobond"
+                        if use_cache and not skip_cache:
                             self._cache.put(
                                 source=entry.source,
                                 symbol=entry.symbol,
@@ -273,6 +311,7 @@ class Client:
         requests: list[FetchRequest],
         start: str,
         end: str,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """
         Fetch data from a source for multiple requests.
@@ -287,6 +326,8 @@ class Client:
             Start date.
         end : str
             End date.
+        **kwargs : Any
+            Additional keyword arguments passed to source.fetch().
 
         Returns
         -------
@@ -303,7 +344,7 @@ class Client:
             end,
         )
 
-        return source.fetch(requests, start, end)
+        return source.fetch(requests, start, end, **kwargs)
 
     def _assemble_dataframe(self, dfs: dict[str, pd.DataFrame], names: list[str]) -> pd.DataFrame:
         """

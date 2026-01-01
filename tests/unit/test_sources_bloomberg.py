@@ -141,6 +141,30 @@ class TestBloombergSourceGetMetadata:
             assert meta["symbol"] == "SPX Index"
 
 
+class TestBloombergSourceKwargs:
+    """Tests for **kwargs handling in BloombergSource."""
+
+    def test_fetch_ignores_kwargs(self, source: BloombergSource) -> None:
+        """BloombergSource.fetch() accepts and ignores **kwargs."""
+        mock_df = pd.DataFrame(
+            {("SPX Index", "PX_LAST"): [100.0]},
+            index=pd.to_datetime(["2024-01-01"]),
+        )
+        mock_df.columns = pd.MultiIndex.from_tuples([("SPX Index", "PX_LAST")])
+
+        with patch("metapyle.sources.bloomberg._get_blp") as mock_get_blp:
+            mock_blp = MagicMock()
+            mock_blp.bdh.return_value = mock_df
+            mock_get_blp.return_value = mock_blp
+
+            requests = [FetchRequest(symbol="SPX Index", field="PX_LAST")]
+            # Pass kwargs that should be ignored
+            df = source.fetch(requests, "2024-01-01", "2024-01-01", unified=True, currency="EUR")
+
+            assert not df.empty
+            mock_blp.bdh.assert_called_once()
+
+
 class TestBloombergSourceIsRegistered:
     """Tests for source registration."""
 

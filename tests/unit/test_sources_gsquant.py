@@ -360,3 +360,33 @@ class TestGSQuantMetadata:
             result = source.get_metadata("EURUSD")
 
             assert result == {}
+
+
+class TestGSQuantSourceKwargs:
+    """Tests for **kwargs handling in GSQuantSource."""
+
+    def test_fetch_ignores_kwargs(self) -> None:
+        """GSQuantSource.fetch() accepts and ignores **kwargs."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        # Mock the gs_quant modules
+        mock_dataset_instance = MagicMock()
+        mock_dataset_instance.get_data.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01"]),
+                "bbid": ["EURUSD"],
+                "impliedVolatility": [0.08],
+            }
+        )
+
+        mock_dataset_class = MagicMock(return_value=mock_dataset_instance)
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": mock_dataset_class, "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            requests = [FetchRequest(symbol="EURUSD", field="FXIMPLIEDVOL::impliedVolatility")]
+            # Pass kwargs that should be ignored
+            df = source.fetch(requests, "2024-01-01", "2024-01-01", unified=True, currency="EUR")
+
+            assert not df.empty

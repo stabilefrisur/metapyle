@@ -138,6 +138,61 @@ result = dfs[0].join(dfs[1:], how="outer")
 - `values_to_pd_data_frame()` returns DataFrame with `date` and `value` columns
 - Full history returned; date filtering is done client-side
 
+### Unified Series (Server-Side Alignment)
+
+`get_unified_series()` fetches multiple series with server-side frequency alignment and currency conversion.
+
+```python
+import macrobond_data_api as mda
+from macrobond_data_api.common.enums import (
+    SeriesFrequency,
+    SeriesWeekdays,
+    CalendarMergeMode,
+)
+from macrobond_data_api.common.types import (
+    StartOrEndPoint,
+    SeriesEntry,
+)
+
+result = mda.get_unified_series(
+    SeriesEntry(name="usgdp"),
+    SeriesEntry(name="gbgdp"),
+    frequency=SeriesFrequency.QUARTERLY,
+    weekdays=SeriesWeekdays.FULLWEEK,
+    calendar_merge_mode=CalendarMergeMode.AVAILABLE_IN_ALL,
+    currency="USD",
+    start_point=StartOrEndPoint("2020-01-01", None),
+    end_point=StartOrEndPoint("2024-12-31", None),
+)
+
+df = result.to_pd_data_frame()
+```
+
+```text
+              usgdp        gbgdp
+2020-03-31  21481.4   2827350.12
+2020-06-30  19477.4   2543218.45
+2020-09-30  21138.6   2798432.67
+2020-12-31  21477.6   2812145.89
+```
+
+### Unified Series Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `frequency` | `SeriesFrequency` | Target frequency (DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY) |
+| `weekdays` | `SeriesWeekdays` | Business day convention (MONDAY_TO_FRIDAY, FULLWEEK, etc.) |
+| `calendar_merge_mode` | `CalendarMergeMode` | How to align calendars (AVAILABLE_IN_ALL, AVAILABLE_IN_ANY) |
+| `currency` | `str` | Currency for conversion (e.g., "USD", "EUR") |
+| `start_point` | `StartOrEndPoint` | Start date or relative offset |
+| `end_point` | `StartOrEndPoint` | End date or relative offset |
+
+### Return Format (Unified)
+
+- `get_unified_series()` returns a `UnifiedSeriesResult` object
+- `to_pd_data_frame()` returns a wide DataFrame with aligned dates
+- All series share the same DatetimeIndex after server-side alignment
+
 ---
 
 ## GS Quant (gs_quant)

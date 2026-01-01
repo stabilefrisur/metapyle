@@ -47,9 +47,7 @@ class MacrobondSource(BaseSource):
         requests: Sequence[FetchRequest],
         start: str,
         end: str,
-        *,
-        unified: bool = False,
-        unified_options: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """
         Fetch time-series data from Macrobond.
@@ -62,12 +60,15 @@ class MacrobondSource(BaseSource):
             Start date in ISO format (YYYY-MM-DD).
         end : str
             End date in ISO format (YYYY-MM-DD).
-        unified : bool, optional
-            If True, use get_unified_series() with server-side alignment.
-            Defaults to False.
-        unified_options : dict[str, Any] | None, optional
-            Options passed to get_unified_series() when unified=True
-            (e.g., frequency, currency, weekdays, calendar_merge_mode).
+        **kwargs : Any
+            Additional keyword arguments:
+
+            unified : bool, optional
+                If True, use get_unified_series() with server-side alignment.
+                Defaults to False.
+            unified_options : dict[str, Any] | None, optional
+                Options passed to get_unified_series() when unified=True
+                (e.g., frequency, currency, weekdays, calendar_merge_mode).
 
         Returns
         -------
@@ -81,6 +82,9 @@ class MacrobondSource(BaseSource):
         NoDataError
             If no data returned or no data in date range.
         """
+        unified = kwargs.pop("unified", False)
+        unified_options: dict[str, Any] | None = kwargs.pop("unified_options", None)
+
         if not requests:
             return pd.DataFrame()
 

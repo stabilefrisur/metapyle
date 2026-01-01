@@ -362,9 +362,7 @@ class TestMacrobondSourceUnified:
 
             requests = [FetchRequest(symbol="usgdp")]
             # Override currency default
-            source.fetch(
-                requests, "2024-01-01", "2024-01-02", unified=True, currency="EUR"
-            )
+            source.fetch(requests, "2024-01-01", "2024-01-02", unified=True, currency="EUR")
 
             call_kwargs = mock_mda.get_unified_series.call_args.kwargs
             # User override should take precedence

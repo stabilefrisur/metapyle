@@ -188,6 +188,80 @@ class TestMacrobondSourceKwargs:
             mock_mda.get_series.assert_called_once_with(["usgdp"])
 
 
+class TestMacrobondSourceUnified:
+    """Tests for unified series support in MacrobondSource."""
+
+    def test_unified_calls_get_unified_series(self, source: MacrobondSource) -> None:
+        """When unified=True, fetch() calls get_unified_series()."""
+        # Mock the unified series result
+        mock_result = MagicMock()
+        mock_result.to_pd_data_frame.return_value = pd.DataFrame(
+            {
+                "usgdp": [100.0, 101.0],
+                "gbgdp": [200.0, 201.0],
+            },
+            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
+        )
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_unified_series.return_value = mock_result
+            mock_get_mda.return_value = mock_mda
+
+            requests = [
+                FetchRequest(symbol="usgdp"),
+                FetchRequest(symbol="gbgdp"),
+            ]
+            df = source.fetch(requests, "2024-01-01", "2024-01-02", unified=True)
+
+            # Verify get_unified_series was called (not get_series)
+            mock_mda.get_unified_series.assert_called_once()
+            assert mock_mda.get_series.call_count == 0
+
+            assert "usgdp" in df.columns
+            assert "gbgdp" in df.columns
+
+    def test_unified_false_calls_get_series(self, source: MacrobondSource) -> None:
+        """When unified=False, fetch() calls get_series() (existing behavior)."""
+        mock_series = _make_mock_series(
+            "usgdp",
+            ["2024-01-01", "2024-01-02"],
+            [100.0, 101.0],
+        )
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_series.return_value = [mock_series]
+            mock_get_mda.return_value = mock_mda
+
+            requests = [FetchRequest(symbol="usgdp")]
+            _ = source.fetch(requests, "2024-01-01", "2024-01-02", unified=False)
+
+            # Verify get_series was called (not get_unified_series)
+            mock_mda.get_series.assert_called_once_with(["usgdp"])
+            assert mock_mda.get_unified_series.call_count == 0
+
+    def test_unified_default_is_false(self, source: MacrobondSource) -> None:
+        """When unified not specified, defaults to False (get_series)."""
+        mock_series = _make_mock_series(
+            "usgdp",
+            ["2024-01-01", "2024-01-02"],
+            [100.0, 101.0],
+        )
+
+        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+            mock_mda = MagicMock()
+            mock_mda.get_series.return_value = [mock_series]
+            mock_get_mda.return_value = mock_mda
+
+            requests = [FetchRequest(symbol="usgdp")]
+            # No unified kwarg
+            _ = source.fetch(requests, "2024-01-01", "2024-01-02")
+
+            mock_mda.get_series.assert_called_once()
+            assert mock_mda.get_unified_series.call_count == 0
+
+
 class TestMacrobondSourceIsRegistered:
     """Tests for source registration."""
 

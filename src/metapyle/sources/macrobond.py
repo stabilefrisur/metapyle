@@ -39,6 +39,7 @@ class MacrobondSource(BaseSource):
     """Source adapter for Macrobond data via macrobond_data_api.
 
     Uses get_series for batch fetching of multiple series in a single call.
+    Supports unified=True kwarg to use get_unified_series() for server-side alignment.
     """
 
     def fetch(
@@ -59,6 +60,11 @@ class MacrobondSource(BaseSource):
             Start date in ISO format (YYYY-MM-DD).
         end : str
             End date in ISO format (YYYY-MM-DD).
+        **kwargs : Any
+            unified : bool - If True, use get_unified_series() with server-side
+                alignment. Defaults to False.
+            Other kwargs passed to get_unified_series() when unified=True
+            (e.g., frequency, currency, weekdays, calendar_merge_mode).
 
         Returns
         -------
@@ -83,10 +89,26 @@ class MacrobondSource(BaseSource):
                 "Install with: pip install macrobond-data-api"
             )
 
+        # Extract unified flag; remaining kwargs go to get_unified_series
+        unified = kwargs.pop("unified", False)
+
+        if unified:
+            return self._fetch_unified(mda, requests, start, end, **kwargs)
+        else:
+            return self._fetch_regular(mda, requests, start, end)
+
+    def _fetch_regular(
+        self,
+        mda: Any,
+        requests: Sequence[FetchRequest],
+        start: str,
+        end: str,
+    ) -> pd.DataFrame:
+        """Fetch using get_series() - existing behavior."""
         symbols = [req.symbol for req in requests]
 
         logger.debug(
-            "fetch_start: symbols=%s, start=%s, end=%s",
+            "fetch_start: symbols=%s, start=%s, end=%s, mode=regular",
             symbols,
             start,
             end,
@@ -152,11 +174,49 @@ class MacrobondSource(BaseSource):
             raise NoDataError(f"No data in date range {start} to {end}")
 
         logger.info(
-            "fetch_complete: symbols=%s, rows=%d",
+            "fetch_complete: symbols=%s, rows=%d, mode=regular",
             symbols,
             len(result),
         )
         return result
+
+    def _fetch_unified(
+        self,
+        mda: Any,
+        requests: Sequence[FetchRequest],
+        start: str,
+        end: str,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
+        """Fetch using get_unified_series() with server-side alignment."""
+        # Stub - will be fully implemented in Task 8
+        symbols = [req.symbol for req in requests]
+
+        logger.debug(
+            "fetch_start: symbols=%s, start=%s, end=%s, mode=unified",
+            symbols,
+            start,
+            end,
+        )
+
+        # For now, just call get_unified_series with symbols
+        # Full implementation with defaults/kwargs in Task 8
+        result = mda.get_unified_series(*symbols)
+        df = result.to_pd_data_frame()
+
+        # Basic normalization
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
+        df.index.name = "date"
+        if df.index.tz is None:
+            df.index = df.index.tz_localize("UTC")
+
+        logger.info(
+            "fetch_complete: symbols=%s, rows=%d, mode=unified",
+            symbols,
+            len(df),
+        )
+        return df
 
     def get_metadata(self, symbol: str) -> dict[str, Any]:
         """Retrieve metadata for a Macrobond symbol."""

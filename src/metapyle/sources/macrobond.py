@@ -47,7 +47,9 @@ class MacrobondSource(BaseSource):
         requests: Sequence[FetchRequest],
         start: str,
         end: str,
-        **kwargs: Any,
+        *,
+        unified: bool = False,
+        unified_options: dict[str, Any] | None = None,
     ) -> pd.DataFrame:
         """
         Fetch time-series data from Macrobond.
@@ -60,10 +62,11 @@ class MacrobondSource(BaseSource):
             Start date in ISO format (YYYY-MM-DD).
         end : str
             End date in ISO format (YYYY-MM-DD).
-        **kwargs : Any
-            unified : bool - If True, use get_unified_series() with server-side
-                alignment. Defaults to False.
-            Other kwargs passed to get_unified_series() when unified=True
+        unified : bool, optional
+            If True, use get_unified_series() with server-side alignment.
+            Defaults to False.
+        unified_options : dict[str, Any] | None, optional
+            Options passed to get_unified_series() when unified=True
             (e.g., frequency, currency, weekdays, calendar_merge_mode).
 
         Returns
@@ -89,11 +92,8 @@ class MacrobondSource(BaseSource):
                 "Install with: pip install macrobond-data-api"
             )
 
-        # Extract unified flag; remaining kwargs go to get_unified_series
-        unified = kwargs.pop("unified", False)
-
         if unified:
-            return self._fetch_unified(mda, requests, start, end, **kwargs)
+            return self._fetch_unified(mda, requests, start, end, **(unified_options or {}))
         else:
             return self._fetch_regular(mda, requests, start, end)
 

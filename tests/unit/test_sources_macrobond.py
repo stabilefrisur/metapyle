@@ -165,10 +165,10 @@ class TestMacrobondSourceGetMetadata:
 
 
 class TestMacrobondSourceKwargs:
-    """Tests for **kwargs handling in MacrobondSource."""
+    """Tests for unified_options handling in MacrobondSource."""
 
-    def test_fetch_accepts_kwargs(self, source: MacrobondSource) -> None:
-        """MacrobondSource.fetch() accepts **kwargs without error."""
+    def test_fetch_accepts_unified_options(self, source: MacrobondSource) -> None:
+        """MacrobondSource.fetch() accepts unified_options param."""
         mock_series = _make_mock_series(
             "usgdp",
             ["2024-01-01", "2024-01-02"],
@@ -181,8 +181,11 @@ class TestMacrobondSourceKwargs:
             mock_get_mda.return_value = mock_mda
 
             requests = [FetchRequest(symbol="usgdp")]
-            # Pass kwargs - should be accepted (unified=False uses existing behavior)
-            df = source.fetch(requests, "2024-01-01", "2024-01-02", unified=False, currency="EUR")
+            # Pass unified_options - should be accepted (unified=False ignores it)
+            df = source.fetch(
+                requests, "2024-01-01", "2024-01-02",
+                unified=False, unified_options={"currency": "EUR"},
+            )
 
             assert list(df.columns) == ["usgdp"]
             mock_mda.get_series.assert_called_once_with(["usgdp"])
@@ -329,8 +332,8 @@ class TestMacrobondSourceUnified:
             assert "start_point" in call_kwargs
             assert "end_point" in call_kwargs
 
-    def test_unified_kwargs_override_defaults(self, source: MacrobondSource) -> None:
-        """User kwargs override hardcoded defaults."""
+    def test_unified_options_override_defaults(self, source: MacrobondSource) -> None:
+        """unified_options override hardcoded defaults."""
         mock_result = MagicMock()
         mock_result.to_pd_data_frame.return_value = pd.DataFrame(
             {"usgdp": [100.0]},
@@ -361,8 +364,11 @@ class TestMacrobondSourceUnified:
             mock_get_mda.return_value = mock_mda
 
             requests = [FetchRequest(symbol="usgdp")]
-            # Override currency default
-            source.fetch(requests, "2024-01-01", "2024-01-02", unified=True, currency="EUR")
+            # Override currency default via unified_options
+            source.fetch(
+                requests, "2024-01-01", "2024-01-02",
+                unified=True, unified_options={"currency": "EUR"},
+            )
 
             call_kwargs = mock_mda.get_unified_series.call_args.kwargs
             # User override should take precedence
@@ -374,6 +380,57 @@ class TestMacrobondSourceUnified:
             requests = [FetchRequest(symbol="usgdp")]
             with pytest.raises(FetchError, match="macrobond"):
                 source.fetch(requests, "2024-01-01", "2024-01-02", unified=True)
+
+
+class TestMacrobondSourceUnifiedOptions:
+    """Tests for unified_options dict parameter."""
+
+    def test_fetch_unified_with_options_dict(self, source: MacrobondSource) -> None:
+        """Test fetch with unified_options dict instead of kwargs."""
+        # Mock the unified series result
+        mock_result = MagicMock()
+        mock_df = pd.DataFrame(
+            {"usgdp": [100.0, 101.0]},
+            index=pd.to_datetime(["2024-01-01", "2024-02-01"]),
+        )
+        mock_result.to_pd_data_frame.return_value = mock_df
+
+        # Mock the macrobond enums/types
+        mock_enums = MagicMock()
+        mock_enums.SeriesFrequency.DAILY = "DAILY"
+        mock_enums.SeriesWeekdays.MONDAY_TO_FRIDAY = "MON_FRI"
+        mock_enums.CalendarMergeMode.AVAILABLE_IN_ALL = "AVAILABLE_IN_ALL"
+
+        mock_types = MagicMock()
+        mock_types.StartOrEndPoint = lambda x, mode: f"StartOrEndPoint({x})"
+
+        with (
+            patch("metapyle.sources.macrobond._get_mda") as mock_get_mda,
+            patch.dict(
+                "sys.modules",
+                {
+                    "macrobond_data_api.common.enums": mock_enums,
+                    "macrobond_data_api.common.types": mock_types,
+                },
+            ),
+        ):
+            mock_mda = MagicMock()
+            mock_mda.get_unified_series.return_value = mock_result
+            mock_get_mda.return_value = mock_mda
+
+            requests = [FetchRequest(symbol="usgdp")]
+            result = source.fetch(
+                requests,
+                "2024-01-01",
+                "2024-12-31",
+                unified=True,
+                unified_options={"currency": "EUR"},
+            )
+
+            assert not result.empty
+            # Verify currency was passed to get_unified_series
+            call_kwargs = mock_mda.get_unified_series.call_args.kwargs
+            assert call_kwargs["currency"] == "EUR"
 
 
 class TestMacrobondSourceIsRegistered:

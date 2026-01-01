@@ -370,6 +370,13 @@ class TestMacrobondSourceUnified:
             # User override should take precedence
             assert call_kwargs["currency"] == "EUR"
 
+    def test_unified_mda_not_available(self, source: MacrobondSource) -> None:
+        """Raise FetchError when unified=True but mda not installed."""
+        with patch("metapyle.sources.macrobond._get_mda", return_value=None):
+            requests = [FetchRequest(symbol="usgdp")]
+            with pytest.raises(FetchError, match="macrobond"):
+                source.fetch(requests, "2024-01-01", "2024-01-02", unified=True)
+
 
 class TestMacrobondSourceIsRegistered:
     """Tests for source registration."""

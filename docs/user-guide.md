@@ -747,7 +747,7 @@ df = client.get(
 
 ### Default Behavior
 
-Without explicit options, unified series uses these defaults:
+Without explicit `unified_options`, unified series uses these defaults:
 
 | Option | Default Value |
 |--------|---------------|
@@ -775,17 +775,36 @@ df = client.get(
     start="2020-01-01",
     end="2024-12-31",
     unified=True,
-    frequency=SeriesFrequency.MONTHLY,
-    weekdays=SeriesWeekdays.FULLWEEK,
-    calendar_merge_mode=CalendarMergeMode.AVAILABLE_IN_ANY,
-    currency="EUR",
-    start_point=StartOrEndPoint.DATA_IN_ALL_SERIES,
+    unified_options={
+        "frequency": SeriesFrequency.MONTHLY,
+        "weekdays": SeriesWeekdays.FULLWEEK,
+        "calendar_merge_mode": CalendarMergeMode.AVAILABLE_IN_ANY,
+        "currency": "EUR",
+        "start_point": StartOrEndPoint.DATA_IN_ALL_SERIES,
+    },
 )
 ```
 
 ### Cache Behavior
 
 When `unified=True`, results are **not cached** because the server-side transformation depends on all symbols together. Each call fetches fresh data from Macrobond.
+
+### Mixed Sources with Unified
+
+When combining Macrobond (with `unified=True`) and other sources, use both `unified_options` for server-side alignment and `frequency` for client-side alignment:
+
+```python
+df = client.get(
+    ["us_gdp", "sp500_close"],  # macrobond + bloomberg
+    start="2020-01-01",
+    end="2024-12-31",
+    unified=True,
+    unified_options={"frequency": SeriesFrequency.MONTHLY},
+    frequency="ME",  # client-side alignment for final merge
+)
+```
+
+This fetches Macrobond series with server-side monthly alignment, fetches Bloomberg series normally, then aligns everything to month-end for the final DataFrame.
 
 ---
 

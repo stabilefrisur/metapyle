@@ -745,6 +745,19 @@ df = client.get(
 )
 ```
 
+### Default Behavior
+
+Without explicit options, unified series uses these defaults:
+
+| Option | Default Value |
+|--------|---------------|
+| `frequency` | `SeriesFrequency.DAILY` |
+| `weekdays` | `SeriesWeekdays.MONDAY_TO_FRIDAY` |
+| `calendar_merge_mode` | `CalendarMergeMode.AVAILABLE_IN_ALL` |
+| `currency` | `"USD"` |
+| `start_point` | `StartOrEndPoint(start)` |
+| `end_point` | `StartOrEndPoint(end)` |
+
 ### Unified Series Options
 
 When `unified=True`, you can pass additional Macrobond-specific options:
@@ -770,32 +783,9 @@ df = client.get(
 )
 ```
 
-### Default Behavior
-
-Without explicit options, unified series uses these defaults:
-
-| Option | Default Value |
-|--------|---------------|
-| `frequency` | `SeriesFrequency.DAILY` |
-| `weekdays` | `SeriesWeekdays.MONDAY_TO_FRIDAY` |
-| `calendar_merge_mode` | `CalendarMergeMode.AVAILABLE_IN_ALL` |
-| `currency` | `"USD"` |
-
 ### Cache Behavior
 
 When `unified=True`, results are **not cached** because the server-side transformation depends on all symbols together. Each call fetches fresh data from Macrobond.
-
-### When to Use Unified Series
-
-**Use `unified=True` when:**
-- You need multiple Macrobond series aligned to a common frequency
-- You want server-side currency conversion
-- You need consistent business day handling across series
-
-**Use regular fetching (default) when:**
-- You're fetching single series
-- You're mixing sources (Bloomberg, GS Quant, local files)
-- You want results cached for performance
 
 ---
 

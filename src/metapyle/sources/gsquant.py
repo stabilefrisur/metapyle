@@ -105,6 +105,7 @@ class GSQuantSource(BaseSource):
         requests: Sequence[FetchRequest],
         start: str,
         end: str,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """
         Fetch data from gs-quant datasets.

@@ -121,13 +121,13 @@ class Client:
         >>> client = Client(catalog="catalog.yaml")
         >>> df = client.get(["GDP_US", "CPI_EU"], start="2020-01-01", end="2024-12-31")
 
-        >>> # Unified series with custom frequency
+        >>> # Unified series with custom options
         >>> df = client.get(
         ...     ["gdp_us", "gdp_eu"],
         ...     start="2020-01-01",
         ...     end="2024-12-31",
         ...     unified=True,
-        ...     frequency=SeriesFrequency.QUARTERLY,
+        ...     unified_options={"frequency": SeriesFrequency.QUARTERLY},
         ... )
         """
         # Default end to today if not specified

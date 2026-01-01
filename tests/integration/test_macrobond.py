@@ -136,3 +136,66 @@ class TestMacrobondCache:
         assert second_duration < first_duration
 
         client.close()
+
+
+class TestMacrobondUnified:
+    """Integration tests for unified series functionality."""
+
+    def test_unified_basic(
+        self,
+        macrobond_client: Client,
+        test_start: str,
+        test_end: str,
+    ) -> None:
+        """Test basic unified series fetch."""
+        df = macrobond_client.get(
+            ["sp500_mb", "us_gdp_mb"],  # daily + quarterly
+            start=test_start,
+            end=test_end,
+            unified=True,
+        )
+        assert isinstance(df, pd.DataFrame)
+        assert not df.empty
+        assert "sp500_mb" in df.columns
+        assert "us_gdp_mb" in df.columns
+        # Unified should produce aligned data (same index for both)
+        assert df.index.is_monotonic_increasing
+
+    def test_unified_with_frequency(
+        self,
+        macrobond_client: Client,
+        test_start: str,
+        test_end: str,
+    ) -> None:
+        """Test unified series with explicit frequency override."""
+        from macrobond_data_api.common.enums import SeriesFrequency
+
+        df = macrobond_client.get(
+            ["sp500_mb", "us_gdp_mb"],  # daily + quarterly
+            start=test_start,
+            end=test_end,
+            unified=True,
+            frequency=SeriesFrequency.QUARTERLY,
+        )
+        assert isinstance(df, pd.DataFrame)
+        assert not df.empty
+        # Both columns should be present with quarterly frequency
+        assert "sp500_mb" in df.columns
+        assert "us_gdp_mb" in df.columns
+
+    def test_unified_single_series(
+        self,
+        macrobond_client: Client,
+        test_start: str,
+        test_end: str,
+    ) -> None:
+        """Test unified with single series (edge case)."""
+        df = macrobond_client.get(
+            ["sp500_mb"],
+            start=test_start,
+            end=test_end,
+            unified=True,
+        )
+        assert isinstance(df, pd.DataFrame)
+        assert not df.empty
+        assert "sp500_mb" in df.columns

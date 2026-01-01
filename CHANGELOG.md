@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Macrobond unified series support via `unified=True` parameter for server-side frequency and currency alignment
+- `output_format="long"` parameter in `Client.get()` for wide-to-long DataFrame conversion
+- `Client.list_cached()` method for inspecting cached entries
+- `params` column parsing as JSON in `Catalog.from_csv()`
+- Require `field` attribute for Bloomberg catalog entries (validation error if missing)
+- Export source classes (`BloombergSource`, `MacrobondSource`, etc.) from `metapyle.sources`
+
+### Changed
+
+- **BREAKING:** Rename `symbols` parameter to `names` in `Client.get()` and related methods
+- **BREAKING:** Rename `SymbolNotFoundError` to `NameNotFoundError`
+- Simplify cache clear API to `clear_cache(source=None)` (removed symbol-level clearing)
+- Standardize DataFrame index name to `date` across all sources
+- Normalize timezone to UTC across all sources
+- Preserve column order in assembled DataFrame to match request order
+
+### Fixed
+
+- Only bypass cache for Macrobond entries when `unified=True` (previously bypassed for all Macrobond)
+
 ## [0.1.3] - 2025-12-29
 
 ### Added

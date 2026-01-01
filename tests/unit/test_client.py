@@ -902,6 +902,61 @@ def test_get_accepts_unified_options_parameter() -> None:
             )
 
 
+def test_frequency_and_unified_options_frequency_are_independent() -> None:
+    """Test that frequency (pandas) and unified_options.frequency don't collide.
+
+    This is the core issue we're solving - before this refactor, passing
+    frequency=SeriesFrequency.MONTHLY would be used for both Macrobond
+    server-side alignment AND pandas client-side resampling, causing errors.
+    """
+    from unittest.mock import Mock, patch
+
+    with patch("metapyle.client.Catalog") as mock_catalog_cls:
+        mock_catalog = Mock()
+        mock_catalog.__len__ = Mock(return_value=1)
+        mock_catalog.validate_sources = Mock()
+        mock_catalog_cls.from_yaml.return_value = mock_catalog
+
+        # Mock a macrobond entry
+        mock_entry = Mock()
+        mock_entry.my_name = "test_series"
+        mock_entry.source = "macrobond"
+        mock_entry.symbol = "usgdp"
+        mock_entry.field = None
+        mock_entry.path = None
+        mock_entry.params = None
+        mock_catalog.get.return_value = mock_entry
+
+        client = Client(catalog="test.yaml")
+
+        # Mock the source fetch to return some data
+        with patch.object(client, "_fetch_from_source") as mock_fetch:
+            mock_df = pd.DataFrame(
+                {"usgdp": [100.0, 101.0]},
+                index=pd.to_datetime(["2024-01-31", "2024-02-29"]),
+            )
+            mock_fetch.return_value = mock_df
+
+            # This should work - frequency is pandas string, unified_options has Macrobond enum
+            result = client.get(
+                ["test_series"],
+                start="2024-01-01",
+                end="2024-12-31",
+                unified=True,
+                unified_options={"frequency": "MOCK_ENUM_VALUE"},  # Would be SeriesFrequency
+                frequency="ME",  # pandas month-end
+            )
+
+            # Verify _fetch_from_source was called with unified_options
+            mock_fetch.assert_called_once()
+            call_kwargs = mock_fetch.call_args.kwargs
+            assert call_kwargs["unified"] is True
+            assert call_kwargs["unified_options"] == {"frequency": "MOCK_ENUM_VALUE"}
+
+            # Result should exist (frequency alignment would have run)
+            assert result is not None
+
+
 class TestClientUnifiedCache:
     """Tests for cache behavior with unified=True."""
 

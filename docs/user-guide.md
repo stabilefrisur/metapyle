@@ -14,9 +14,10 @@
 6. [Querying Data](#querying-data)
 7. [Frequency Alignment](#frequency-alignment)
 8. [Caching](#caching)
-9. [Data Sources](#data-sources)
-10. [Error Handling](#error-handling)
-11. [Architecture Overview](#architecture-overview)
+9. [Macrobond Unified Series](#macrobond-unified-series)
+10. [Data Sources](#data-sources)
+11. [Error Handling](#error-handling)
+12. [Architecture Overview](#architecture-overview)
 
 ---
 
@@ -724,6 +725,80 @@ client.clear_cache(source="bloomberg")
 
 ---
 
+## Macrobond Unified Series
+
+For Macrobond sources, metapyle supports server-side frequency alignment using Macrobond's `get_unified_series()` API. This is useful when you need multiple time series aligned to a common frequency with consistent business day handling.
+
+### Basic Usage
+
+```python
+from metapyle import Client
+
+client = Client(catalog="catalog.yaml")
+
+# Fetch with unified series (server-side alignment)
+df = client.get(
+    ["us_gdp", "eu_gdp", "jp_gdp"],
+    start="2020-01-01",
+    end="2024-12-31",
+    unified=True,
+)
+```
+
+### Unified Series Options
+
+When `unified=True`, you can pass additional Macrobond-specific options:
+
+```python
+from macrobond_data_api.common.enums import (
+    SeriesFrequency,
+    SeriesWeekdays,
+    CalendarMergeMode,
+    StartOrEndPoint,
+)
+
+df = client.get(
+    ["sp500", "stoxx600"],
+    start="2020-01-01",
+    end="2024-12-31",
+    unified=True,
+    frequency=SeriesFrequency.MONTHLY,
+    weekdays=SeriesWeekdays.FULLWEEK,
+    calendar_merge_mode=CalendarMergeMode.AVAILABLE_IN_ANY,
+    currency="EUR",
+    start_point=StartOrEndPoint.DATA_IN_ALL_SERIES,
+)
+```
+
+### Default Behavior
+
+Without explicit options, unified series uses these defaults:
+
+| Option | Default Value |
+|--------|---------------|
+| `frequency` | `SeriesFrequency.DAILY` |
+| `weekdays` | `SeriesWeekdays.MONDAY_TO_FRIDAY` |
+| `calendar_merge_mode` | `CalendarMergeMode.AVAILABLE_IN_ALL` |
+| `currency` | `"USD"` |
+
+### Cache Behavior
+
+When `unified=True`, results are **not cached** because the server-side transformation depends on all symbols together. Each call fetches fresh data from Macrobond.
+
+### When to Use Unified Series
+
+**Use `unified=True` when:**
+- You need multiple Macrobond series aligned to a common frequency
+- You want server-side currency conversion
+- You need consistent business day handling across series
+
+**Use regular fetching (default) when:**
+- You're fetching single series
+- You're mixing sources (Bloomberg, GS Quant, local files)
+- You want results cached for performance
+
+---
+
 ## Data Sources
 
 Metapyle supports multiple data sources through adapters. Each source has its own requirements and symbol format.
@@ -769,18 +844,7 @@ Fetches data from Macrobond via the `macrobond-data-api` library.
   description: UK Consumer Price Index
 ```
 
-**Unified series mode:** For advanced queries with frequency/currency alignment, use `get_raw()` with `unified=True`:
-
-```python
-df = client.get_raw(
-    source="macrobond",
-    symbol="usgdp",
-    start="2020-01-01",
-    unified=True,
-    frequency="Monthly",
-    currency="EUR"
-)
-```
+**Unified series mode:** For server-side frequency and currency alignment, see [Macrobond Unified Series](#macrobond-unified-series).
 
 ### GS Quant (`gsquant`)
 

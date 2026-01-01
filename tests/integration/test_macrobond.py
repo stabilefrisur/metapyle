@@ -175,7 +175,7 @@ class TestMacrobondUnified:
             start=test_start,
             end=test_end,
             unified=True,
-            frequency=SeriesFrequency.QUARTERLY,
+            unified_options={"frequency": SeriesFrequency.QUARTERLY},
         )
         assert isinstance(df, pd.DataFrame)
         assert not df.empty

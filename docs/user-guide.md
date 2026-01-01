@@ -798,7 +798,6 @@ Metapyle supports multiple data sources through adapters. Each source has its ow
 Fetches data from Bloomberg Terminal via the `xbbg` library.
 
 **Requirements:**
-- `pip install metapyle[bloomberg]`
 - Bloomberg Terminal running locally, OR Bloomberg Server API (B-PIPE) access
 
 **Symbol format:** Standard Bloomberg tickers (`SPX Index`, `AAPL US Equity`, `EURUSD Curncy`)
@@ -817,7 +816,6 @@ Fetches data from Bloomberg Terminal via the `xbbg` library.
 Fetches data from Macrobond via the `macrobond-data-api` library.
 
 **Requirements:**
-- `pip install metapyle[macrobond]`
 - Macrobond desktop app installed, OR Macrobond Web API credentials
 
 **Symbol format:** Macrobond series names (e.g., `usgdp`, `gbcpi`, `derate0003`)
@@ -841,7 +839,6 @@ Fetches data from Macrobond via the `macrobond-data-api` library.
 Fetches data from GS Marquee platform via the `gs-quant` library.
 
 **Requirements:**
-- `pip install metapyle[gsquant]`
 - GS Quant session authenticated (call `GsSession.use()` before fetching)
 
 **Symbol format:** Bloomberg ID (bbid) for the asset (e.g., `EURUSD`, `SPX`, `AAPL`)

@@ -78,6 +78,7 @@ See the [User Guide](docs/user-guide.md) for complete documentation, including:
 - Creating catalogs from CSV
 - Frequency alignment
 - Caching
+- Macrobond unified series (server-side alignment)
 - Available data sources
 - Error handling
 

@@ -52,6 +52,7 @@ class BloombergSource(BaseSource):
         requests: Sequence[FetchRequest],
         start: str,
         end: str,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """
         Fetch historical data from Bloomberg.

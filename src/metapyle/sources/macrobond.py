@@ -189,12 +189,12 @@ class MacrobondSource(BaseSource):
         **kwargs: Any,
     ) -> pd.DataFrame:
         """Fetch using get_unified_series() with server-side alignment."""
-        from macrobond_data_api.common.enums import (
+        from macrobond_data_api.common.enums import (  # type: ignore[attr-defined]
             CalendarMergeMode,
             SeriesFrequency,
             SeriesWeekdays,
         )
-        from macrobond_data_api.common.types import StartOrEndPoint
+        from macrobond_data_api.common.types import StartOrEndPoint  # type: ignore[attr-defined]
 
         symbols = [req.symbol for req in requests]
 
@@ -211,8 +211,8 @@ class MacrobondSource(BaseSource):
             "weekdays": SeriesWeekdays.MONDAY_TO_FRIDAY,
             "calendar_merge_mode": CalendarMergeMode.AVAILABLE_IN_ALL,
             "currency": "USD",
-            "start_point": StartOrEndPoint(start),
-            "end_point": StartOrEndPoint(end),
+            "start_point": StartOrEndPoint(start, None),
+            "end_point": StartOrEndPoint(end, None),
         }
         # User overrides take precedence
         unified_kwargs.update(kwargs)

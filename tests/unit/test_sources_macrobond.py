@@ -210,7 +210,7 @@ class TestMacrobondSourceUnified:
         mock_enums.CalendarMergeMode.AVAILABLE_IN_ALL = "AVAILABLE_IN_ALL"
 
         mock_types = MagicMock()
-        mock_types.StartOrEndPoint = lambda x: f"StartOrEndPoint({x})"
+        mock_types.StartOrEndPoint = lambda x, mode: f"StartOrEndPoint({x})"
 
         with (
             patch("metapyle.sources.macrobond._get_mda") as mock_get_mda,
@@ -294,7 +294,7 @@ class TestMacrobondSourceUnified:
         mock_enums.CalendarMergeMode.AVAILABLE_IN_ALL = "AVAILABLE_IN_ALL"
 
         mock_types = MagicMock()
-        mock_types.StartOrEndPoint = lambda x: f"StartOrEndPoint({x})"
+        mock_types.StartOrEndPoint = lambda x, mode: f"StartOrEndPoint({x})"
 
         with (
             patch("metapyle.sources.macrobond._get_mda") as mock_get_mda,
@@ -344,7 +344,7 @@ class TestMacrobondSourceUnified:
         mock_enums.CalendarMergeMode.AVAILABLE_IN_ALL = "AVAILABLE_IN_ALL"
 
         mock_types = MagicMock()
-        mock_types.StartOrEndPoint = lambda x: f"StartOrEndPoint({x})"
+        mock_types.StartOrEndPoint = lambda x, mode: f"StartOrEndPoint({x})"
 
         with (
             patch("metapyle.sources.macrobond._get_mda") as mock_get_mda,

@@ -199,7 +199,10 @@ class Client:
 
                 # Batch fetch from source
                 result_df = self._fetch_from_source(
-                    source_name, requests, start, end,
+                    source_name,
+                    requests,
+                    start,
+                    end,
                     unified=unified,
                     unified_options=unified_options,
                 )
@@ -351,7 +354,9 @@ class Client:
         )
 
         return source.fetch(
-            requests, start, end,
+            requests,
+            start,
+            end,
             unified=unified,
             unified_options=unified_options,
         )

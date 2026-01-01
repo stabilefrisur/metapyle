@@ -183,8 +183,11 @@ class TestMacrobondSourceKwargs:
             requests = [FetchRequest(symbol="usgdp")]
             # Pass unified_options - should be accepted (unified=False ignores it)
             df = source.fetch(
-                requests, "2024-01-01", "2024-01-02",
-                unified=False, unified_options={"currency": "EUR"},
+                requests,
+                "2024-01-01",
+                "2024-01-02",
+                unified=False,
+                unified_options={"currency": "EUR"},
             )
 
             assert list(df.columns) == ["usgdp"]
@@ -366,8 +369,11 @@ class TestMacrobondSourceUnified:
             requests = [FetchRequest(symbol="usgdp")]
             # Override currency default via unified_options
             source.fetch(
-                requests, "2024-01-01", "2024-01-02",
-                unified=True, unified_options={"currency": "EUR"},
+                requests,
+                "2024-01-01",
+                "2024-01-02",
+                unified=True,
+                unified_options={"currency": "EUR"},
             )
 
             call_kwargs = mock_mda.get_unified_series.call_args.kwargs

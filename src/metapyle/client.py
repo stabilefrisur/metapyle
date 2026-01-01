@@ -67,7 +67,7 @@ class Client:
         output_format: str = "wide",
         use_cache: bool = True,
         unified: bool = False,
-        **kwargs: Any,
+        unified_options: dict[str, Any] | None = None,
     ) -> pd.DataFrame:
         """
         Fetch time-series data for multiple catalog names.
@@ -95,8 +95,8 @@ class Client:
             Only affects macrobond sources; other sources ignore this parameter.
             When True, cache is bypassed since the transformation depends on all
             symbols together.
-        **kwargs : Any
-            Additional keyword arguments passed to source adapters. For macrobond
+        unified_options : dict[str, Any] | None, optional
+            Options passed to source adapters for unified series. For macrobond
             with unified=True, supports: frequency (SeriesFrequency), weekdays
             (SeriesWeekdays), calendar_merge_mode (CalendarMergeMode), currency
             (str), start_point/end_point (StartOrEndPoint). Unused by other sources.
@@ -198,8 +198,6 @@ class Client:
                 ]
 
                 # Batch fetch from source
-                # Extract unified_options from kwargs for explicit passing
-                unified_options = kwargs.get("unified_options")
                 result_df = self._fetch_from_source(
                     source_name, requests, start, end,
                     unified=unified,

@@ -876,6 +876,32 @@ class TestClientKwargsPassthrough:
         client.close()
 
 
+def test_get_accepts_unified_options_parameter() -> None:
+    """Test get() accepts unified_options as explicit parameter (not kwargs)."""
+    # This tests the signature change - unified_options should be explicit, not via **kwargs
+    from unittest.mock import Mock, patch
+
+    with patch("metapyle.client.Catalog") as mock_catalog_cls:
+        mock_catalog = Mock()
+        mock_catalog.__len__ = Mock(return_value=0)
+        mock_catalog.validate_sources = Mock()
+        mock_catalog_cls.from_yaml.return_value = mock_catalog
+
+        # Make catalog.get raise so we can test signature without full fetch
+        mock_catalog.get.side_effect = NameNotFoundError("test")
+
+        client = Client(catalog="test.yaml")
+
+        # Should not raise TypeError for unified_options parameter
+        with pytest.raises(NameNotFoundError):
+            client.get(
+                ["test"],
+                start="2024-01-01",
+                unified=True,
+                unified_options={"currency": "EUR"},
+            )
+
+
 class TestClientUnifiedCache:
     """Tests for cache behavior with unified=True."""
 

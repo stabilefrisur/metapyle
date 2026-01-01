@@ -133,3 +133,21 @@ class TestLocalFileSourceIsRegistered:
 
         source = _global_registry.get("localfile")
         assert isinstance(source, LocalFileSource)
+
+
+class TestLocalFileSourceKwargs:
+    """Tests for **kwargs handling in LocalFileSource."""
+
+    def test_fetch_ignores_kwargs(self, tmp_path: Path) -> None:
+        """LocalFileSource.fetch() accepts and ignores **kwargs."""
+        # Create test CSV
+        csv_path = tmp_path / "data.csv"
+        csv_path.write_text("date,value\n2024-01-01,100.0\n")
+
+        source = LocalFileSource()
+        requests = [FetchRequest(symbol="value", path=str(csv_path))]
+        # Pass kwargs that should be ignored
+        df = source.fetch(requests, "2024-01-01", "2024-01-01", unified=True, currency="EUR")
+
+        assert not df.empty
+        assert "value" in df.columns

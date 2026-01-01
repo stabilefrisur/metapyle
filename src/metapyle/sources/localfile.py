@@ -28,6 +28,7 @@ class LocalFileSource(BaseSource):
         requests: Sequence[FetchRequest],
         start: str,
         end: str,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """
         Fetch time-series data from a local file.
@@ -40,6 +41,8 @@ class LocalFileSource(BaseSource):
             Start date in ISO format (YYYY-MM-DD).
         end : str
             End date in ISO format (YYYY-MM-DD).
+        **kwargs : Any
+            Additional keyword arguments (ignored for localfile source).
 
         Returns
         -------

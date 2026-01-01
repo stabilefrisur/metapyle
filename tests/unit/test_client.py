@@ -16,6 +16,35 @@ from metapyle.sources.base import BaseSource, FetchRequest, register_source
 # ============================================================================
 
 
+_captured_kwargs: dict[str, Any] = {}
+
+
+@register_source("mock_kwargs_capture")
+class MockKwargsCaptureSource(BaseSource):
+    """Mock source that captures **kwargs from fetch()."""
+
+    def fetch(
+        self,
+        requests: Sequence[FetchRequest],
+        start: str,
+        end: str,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
+        """Capture kwargs and return mock data."""
+        _captured_kwargs.clear()
+        _captured_kwargs.update(kwargs)
+
+        dates = pd.date_range(start, end, freq="D")
+        result = pd.DataFrame(index=dates)
+        for req in requests:
+            result[req.symbol] = list(range(len(dates)))
+        return result
+
+    def get_metadata(self, symbol: str) -> dict[str, Any]:
+        """Return mock metadata."""
+        return {"symbol": symbol}
+
+
 @register_source("mock")
 class MockSource(BaseSource):
     """Mock source for testing."""
@@ -25,6 +54,7 @@ class MockSource(BaseSource):
         requests: Sequence[FetchRequest],
         start: str,
         end: str,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """Return mock data based on symbols."""
         dates = pd.date_range(start, end, freq="D")
@@ -48,6 +78,7 @@ class MockMonthlySource(BaseSource):
         requests: Sequence[FetchRequest],
         start: str,
         end: str,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """Return mock monthly data."""
         dates = pd.date_range(start, end, freq="ME")
@@ -692,6 +723,7 @@ class MockSourceWithParams(BaseSource):
         requests: Sequence[FetchRequest],
         start: str,
         end: str,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """Capture requests and return mock data."""
         _captured_requests.clear()
@@ -814,3 +846,31 @@ class TestGetRawParams:
                 params={"some_param": "value"},  # Should be accepted
             )
             assert len(df) == 3
+
+
+class TestClientKwargsPassthrough:
+    """Tests for Client passing **kwargs to sources."""
+
+    def test_get_passes_kwargs_to_source(self, tmp_path: Path) -> None:
+        """Client.get() passes **kwargs to source.fetch()."""
+        yaml_content = """
+- my_name: test_unified
+  source: mock_kwargs_capture
+  symbol: TEST_SYMBOL
+"""
+        yaml_file = tmp_path / "catalog.yaml"
+        yaml_file.write_text(yaml_content)
+
+        client = Client(catalog=yaml_file, cache_enabled=False)
+        client.get(
+            ["test_unified"],
+            start="2024-01-01",
+            end="2024-01-02",
+            unified=True,
+            currency="EUR",
+        )
+
+        assert _captured_kwargs.get("unified") is True
+        assert _captured_kwargs.get("currency") == "EUR"
+
+        client.close()

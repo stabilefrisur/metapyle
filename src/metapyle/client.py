@@ -66,6 +66,8 @@ class Client:
         frequency: str | None = None,
         output_format: str = "wide",
         use_cache: bool = True,
+        unified: bool = False,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """
         Fetch time-series data for multiple catalog names.
@@ -163,7 +165,9 @@ class Client:
                 ]
 
                 # Batch fetch from source
-                result_df = self._fetch_from_source(source_name, requests, start, end)
+                result_df = self._fetch_from_source(
+                    source_name, requests, start, end, unified=unified, **kwargs
+                )
 
                 # Split result and cache each column
                 for entry in group_entries:
@@ -273,6 +277,7 @@ class Client:
         requests: list[FetchRequest],
         start: str,
         end: str,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """
         Fetch data from a source for multiple requests.
@@ -287,6 +292,8 @@ class Client:
             Start date.
         end : str
             End date.
+        **kwargs : Any
+            Additional keyword arguments passed to source.fetch().
 
         Returns
         -------
@@ -303,7 +310,7 @@ class Client:
             end,
         )
 
-        return source.fetch(requests, start, end)
+        return source.fetch(requests, start, end, **kwargs)
 
     def _assemble_dataframe(self, dfs: dict[str, pd.DataFrame], names: list[str]) -> pd.DataFrame:
         """

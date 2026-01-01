@@ -203,7 +203,25 @@ class TestMacrobondSourceUnified:
             index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
         )
 
-        with patch("metapyle.sources.macrobond._get_mda") as mock_get_mda:
+        # Mock the macrobond enums/types
+        mock_enums = MagicMock()
+        mock_enums.SeriesFrequency.DAILY = "DAILY"
+        mock_enums.SeriesWeekdays.MONDAY_TO_FRIDAY = "MON_FRI"
+        mock_enums.CalendarMergeMode.AVAILABLE_IN_ALL = "AVAILABLE_IN_ALL"
+
+        mock_types = MagicMock()
+        mock_types.StartOrEndPoint = lambda x: f"StartOrEndPoint({x})"
+
+        with (
+            patch("metapyle.sources.macrobond._get_mda") as mock_get_mda,
+            patch.dict(
+                "sys.modules",
+                {
+                    "macrobond_data_api.common.enums": mock_enums,
+                    "macrobond_data_api.common.types": mock_types,
+                },
+            ),
+        ):
             mock_mda = MagicMock()
             mock_mda.get_unified_series.return_value = mock_result
             mock_get_mda.return_value = mock_mda
@@ -260,6 +278,97 @@ class TestMacrobondSourceUnified:
 
             mock_mda.get_series.assert_called_once()
             assert mock_mda.get_unified_series.call_count == 0
+
+    def test_unified_uses_hardcoded_defaults(self, source: MacrobondSource) -> None:
+        """Unified fetch uses hardcoded defaults for common settings."""
+        mock_result = MagicMock()
+        mock_result.to_pd_data_frame.return_value = pd.DataFrame(
+            {"usgdp": [100.0]},
+            index=pd.to_datetime(["2024-01-01"]),
+        )
+
+        # Mock the macrobond enums/types that are imported inside _fetch_unified
+        mock_enums = MagicMock()
+        mock_enums.SeriesFrequency.DAILY = "DAILY"
+        mock_enums.SeriesWeekdays.MONDAY_TO_FRIDAY = "MON_FRI"
+        mock_enums.CalendarMergeMode.AVAILABLE_IN_ALL = "AVAILABLE_IN_ALL"
+
+        mock_types = MagicMock()
+        mock_types.StartOrEndPoint = lambda x: f"StartOrEndPoint({x})"
+
+        with (
+            patch("metapyle.sources.macrobond._get_mda") as mock_get_mda,
+            patch.dict(
+                "sys.modules",
+                {
+                    "macrobond_data_api.common.enums": mock_enums,
+                    "macrobond_data_api.common.types": mock_types,
+                },
+            ),
+        ):
+            mock_mda = MagicMock()
+            mock_mda.get_unified_series.return_value = mock_result
+            mock_get_mda.return_value = mock_mda
+
+            requests = [FetchRequest(symbol="usgdp")]
+            source.fetch(requests, "2024-01-01", "2024-01-02", unified=True)
+
+            # Verify get_unified_series was called with symbols and kwargs
+            call_args = mock_mda.get_unified_series.call_args
+
+            # First positional arg should be unpacked symbols
+            assert call_args.args == ("usgdp",)
+
+            # Check that default kwargs were passed
+            call_kwargs = call_args.kwargs
+            assert "frequency" in call_kwargs
+            assert "weekdays" in call_kwargs
+            assert "calendar_merge_mode" in call_kwargs
+            assert "currency" in call_kwargs
+            assert call_kwargs["currency"] == "USD"
+            assert "start_point" in call_kwargs
+            assert "end_point" in call_kwargs
+
+    def test_unified_kwargs_override_defaults(self, source: MacrobondSource) -> None:
+        """User kwargs override hardcoded defaults."""
+        mock_result = MagicMock()
+        mock_result.to_pd_data_frame.return_value = pd.DataFrame(
+            {"usgdp": [100.0]},
+            index=pd.to_datetime(["2024-01-01"]),
+        )
+
+        # Mock the macrobond enums/types
+        mock_enums = MagicMock()
+        mock_enums.SeriesFrequency.DAILY = "DAILY"
+        mock_enums.SeriesWeekdays.MONDAY_TO_FRIDAY = "MON_FRI"
+        mock_enums.CalendarMergeMode.AVAILABLE_IN_ALL = "AVAILABLE_IN_ALL"
+
+        mock_types = MagicMock()
+        mock_types.StartOrEndPoint = lambda x: f"StartOrEndPoint({x})"
+
+        with (
+            patch("metapyle.sources.macrobond._get_mda") as mock_get_mda,
+            patch.dict(
+                "sys.modules",
+                {
+                    "macrobond_data_api.common.enums": mock_enums,
+                    "macrobond_data_api.common.types": mock_types,
+                },
+            ),
+        ):
+            mock_mda = MagicMock()
+            mock_mda.get_unified_series.return_value = mock_result
+            mock_get_mda.return_value = mock_mda
+
+            requests = [FetchRequest(symbol="usgdp")]
+            # Override currency default
+            source.fetch(
+                requests, "2024-01-01", "2024-01-02", unified=True, currency="EUR"
+            )
+
+            call_kwargs = mock_mda.get_unified_series.call_args.kwargs
+            # User override should take precedence
+            assert call_kwargs["currency"] == "EUR"
 
 
 class TestMacrobondSourceIsRegistered:

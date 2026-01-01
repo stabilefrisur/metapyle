@@ -189,7 +189,13 @@ class MacrobondSource(BaseSource):
         **kwargs: Any,
     ) -> pd.DataFrame:
         """Fetch using get_unified_series() with server-side alignment."""
-        # Stub - will be fully implemented in Task 8
+        from macrobond_data_api.common.enums import (
+            CalendarMergeMode,
+            SeriesFrequency,
+            SeriesWeekdays,
+        )
+        from macrobond_data_api.common.types import StartOrEndPoint
+
         symbols = [req.symbol for req in requests]
 
         logger.debug(
@@ -199,17 +205,43 @@ class MacrobondSource(BaseSource):
             end,
         )
 
-        # For now, just call get_unified_series with symbols
-        # Full implementation with defaults/kwargs in Task 8
-        result = mda.get_unified_series(*symbols)
+        # Hardcoded defaults
+        unified_kwargs: dict[str, Any] = {
+            "frequency": SeriesFrequency.DAILY,
+            "weekdays": SeriesWeekdays.MONDAY_TO_FRIDAY,
+            "calendar_merge_mode": CalendarMergeMode.AVAILABLE_IN_ALL,
+            "currency": "USD",
+            "start_point": StartOrEndPoint(start),
+            "end_point": StartOrEndPoint(end),
+        }
+        # User overrides take precedence
+        unified_kwargs.update(kwargs)
+
+        try:
+            result = mda.get_unified_series(*symbols, **unified_kwargs)
+        except Exception as e:
+            logger.error("fetch_failed: symbols=%s, error=%s, mode=unified", symbols, str(e))
+            raise FetchError(f"Macrobond unified API error: {e}") from e
+
+        # Convert to DataFrame
         df = result.to_pd_data_frame()
 
-        # Basic normalization
+        if df.empty:
+            logger.warning("fetch_empty: symbols=%s, mode=unified", symbols)
+            raise NoDataError(f"No unified data returned for {symbols}")
+
+        # Ensure index is DatetimeIndex
         if not isinstance(df.index, pd.DatetimeIndex):
             df.index = pd.to_datetime(df.index)
+
+        # Normalize index name
         df.index.name = "date"
+
+        # Ensure UTC timezone
         if df.index.tz is None:
             df.index = df.index.tz_localize("UTC")
+        else:
+            df.index = df.index.tz_convert("UTC")
 
         logger.info(
             "fetch_complete: symbols=%s, rows=%d, mode=unified",

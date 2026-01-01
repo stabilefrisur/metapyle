@@ -849,10 +849,10 @@ class TestGetRawParams:
 
 
 class TestClientKwargsPassthrough:
-    """Tests for Client passing **kwargs to sources."""
+    """Tests for Client passing unified_options to sources."""
 
-    def test_get_passes_kwargs_to_source(self, tmp_path: Path) -> None:
-        """Client.get() passes **kwargs to source.fetch()."""
+    def test_get_passes_unified_options_to_source(self, tmp_path: Path) -> None:
+        """Client.get() passes unified and unified_options to source.fetch()."""
         yaml_content = """
 - my_name: test_unified
   source: mock_kwargs_capture
@@ -867,11 +867,11 @@ class TestClientKwargsPassthrough:
             start="2024-01-01",
             end="2024-01-02",
             unified=True,
-            currency="EUR",
+            unified_options={"currency": "EUR"},
         )
 
         assert _captured_kwargs.get("unified") is True
-        assert _captured_kwargs.get("currency") == "EUR"
+        assert _captured_kwargs.get("unified_options") == {"currency": "EUR"}
 
         client.close()
 

@@ -198,8 +198,12 @@ class Client:
                 ]
 
                 # Batch fetch from source
+                # Extract unified_options from kwargs for explicit passing
+                unified_options = kwargs.get("unified_options")
                 result_df = self._fetch_from_source(
-                    source_name, requests, start, end, unified=unified, **kwargs
+                    source_name, requests, start, end,
+                    unified=unified,
+                    unified_options=unified_options,
                 )
 
                 # Split result and cache each column
@@ -311,7 +315,9 @@ class Client:
         requests: list[FetchRequest],
         start: str,
         end: str,
-        **kwargs: Any,
+        *,
+        unified: bool = False,
+        unified_options: dict[str, Any] | None = None,
     ) -> pd.DataFrame:
         """
         Fetch data from a source for multiple requests.
@@ -326,8 +332,10 @@ class Client:
             Start date.
         end : str
             End date.
-        **kwargs : Any
-            Additional keyword arguments passed to source.fetch().
+        unified : bool, default False
+            Whether to use unified series API (macrobond only).
+        unified_options : dict[str, Any] | None, optional
+            Options for unified series (frequency, currency, etc.).
 
         Returns
         -------
@@ -344,7 +352,11 @@ class Client:
             end,
         )
 
-        return source.fetch(requests, start, end, **kwargs)
+        return source.fetch(
+            requests, start, end,
+            unified=unified,
+            unified_options=unified_options,
+        )
 
     def _assemble_dataframe(self, dfs: dict[str, pd.DataFrame], names: list[str]) -> pd.DataFrame:
         """

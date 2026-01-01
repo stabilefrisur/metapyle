@@ -66,6 +66,7 @@ class BaseSource(ABC):
         requests: Sequence[FetchRequest],
         start: str,
         end: str,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """
         Fetch time-series data for one or more symbols.
@@ -78,6 +79,9 @@ class BaseSource(ABC):
             Start date in ISO format (YYYY-MM-DD).
         end : str
             End date in ISO format (YYYY-MM-DD).
+        **kwargs : Any
+            Source-specific keyword arguments. Passed through from Client.get().
+            Most sources ignore these; MacrobondSource uses them for unified series.
 
         Returns
         -------

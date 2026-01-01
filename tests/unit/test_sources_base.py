@@ -209,6 +209,35 @@ class TestFetchRequest:
             req.symbol = "changed"  # type: ignore[misc]
 
 
+class TestBaseSourceKwargs:
+    """Tests for **kwargs support in BaseSource."""
+
+    def test_fetch_accepts_kwargs(self) -> None:
+        """BaseSource.fetch() signature accepts **kwargs."""
+        from typing import Any
+
+        class TestSource(BaseSource):
+            def fetch(
+                self,
+                requests: Sequence[FetchRequest],
+                start: str,
+                end: str,
+                **kwargs: Any,
+            ) -> pd.DataFrame:
+                # Store kwargs for verification
+                self.received_kwargs = kwargs
+                return pd.DataFrame()
+
+            def get_metadata(self, symbol: str) -> dict[str, Any]:
+                return {}
+
+        source = TestSource()
+        requests = [FetchRequest(symbol="TEST")]
+        source.fetch(requests, "2024-01-01", "2024-01-02", unified=True, currency="EUR")
+
+        assert source.received_kwargs == {"unified": True, "currency": "EUR"}
+
+
 class TestFetchRequestParams:
     """Tests for FetchRequest params field."""
 

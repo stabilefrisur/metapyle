@@ -35,8 +35,7 @@ def _gsquant_available() -> bool:
     try:
         from gs_quant.session import GsSession
 
-        # Check if session is initialized (will raise if not)
-        _ = GsSession.current
+        GsSession.use()
         return True
     except Exception:
         return False

@@ -10,7 +10,13 @@ import pandas as pd
 
 from metapyle.cache import Cache
 from metapyle.catalog import Catalog, CatalogEntry
-from metapyle.sources.base import FetchRequest, SourceRegistry, _global_registry, make_column_name, normalize_dataframe
+from metapyle.sources.base import (
+    FetchRequest,
+    SourceRegistry,
+    _global_registry,
+    make_column_name,
+    normalize_dataframe,
+)
 
 __all__ = ["Client"]
 

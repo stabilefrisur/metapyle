@@ -11,6 +11,7 @@ from metapyle.sources.base import (
     BaseSource,
     FetchRequest,
     make_column_name,
+    normalize_dataframe,
     register_source,
 )
 
@@ -125,22 +126,13 @@ class BloombergSource(BaseSource):
         requested_cols = [make_column_name(req.symbol, req.field or "PX_LAST") for req in requests]
         df = df[[c for c in requested_cols if c in df.columns]]
 
-        # Normalize index name
-        df.index.name = "date"
-
-        # Ensure UTC timezone
-        if df.index.tz is None:
-            df.index = df.index.tz_localize("UTC")
-        else:
-            df.index = df.index.tz_convert("UTC")
-
         logger.info(
             "fetch_complete: tickers=%s, fields=%s, rows=%d",
             tickers,
             fields,
             len(df),
         )
-        return df
+        return normalize_dataframe(df)
 
     def get_metadata(self, symbol: str) -> dict[str, Any]:
         """Retrieve metadata for a Bloomberg symbol."""

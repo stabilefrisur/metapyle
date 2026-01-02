@@ -7,7 +7,13 @@ from typing import Any
 import pandas as pd
 
 from metapyle.exceptions import FetchError, NoDataError
-from metapyle.sources.base import BaseSource, FetchRequest, make_column_name, register_source
+from metapyle.sources.base import (
+    BaseSource,
+    FetchRequest,
+    make_column_name,
+    normalize_dataframe,
+    register_source,
+)
 
 __all__ = ["GSQuantSource"]
 
@@ -230,14 +236,7 @@ class GSQuantSource(BaseSource):
         for df in result_dfs[1:]:
             result = result.join(df, how="outer")
 
-        # Normalize index name
-        result.index.name = "date"
-
-        # Ensure UTC timezone
-        if result.index.tz is None:
-            result.index = result.index.tz_localize("UTC")
-        else:
-            result.index = result.index.tz_convert("UTC")
+        result = normalize_dataframe(result)
 
         logger.info(
             "fetch_complete: columns=%s, rows=%d",

@@ -9,7 +9,13 @@ import pandas as pd
 
 from metapyle.exceptions import UnknownSourceError
 
-__all__ = ["BaseSource", "FetchRequest", "make_column_name", "register_source"]
+__all__ = [
+    "BaseSource",
+    "FetchRequest",
+    "make_column_name",
+    "normalize_dataframe",
+    "register_source",
+]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52,6 +58,49 @@ def make_column_name(symbol: str, field: str | None) -> str:
         "symbol::field" if field present, otherwise "symbol".
     """
     return f"{symbol}::{field}" if field else symbol
+
+
+def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalize DataFrame for consistent source output.
+
+    Ensures:
+    - Index is DatetimeIndex (converts if needed)
+    - Index timezone is UTC (localizes naive, converts aware)
+    - Index name is "date"
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with datetime-like index.
+
+    Returns
+    -------
+    pd.DataFrame
+        Normalized DataFrame (mutated in place, returned for chaining).
+
+    Raises
+    ------
+    ValueError
+        If index cannot be converted to DatetimeIndex.
+    """
+    # Convert to DatetimeIndex if needed
+    if not isinstance(df.index, pd.DatetimeIndex):
+        try:
+            df.index = pd.to_datetime(df.index)
+        except Exception as e:
+            raise ValueError(f"Cannot convert index to DatetimeIndex: {e}") from e
+
+    # Normalize timezone to UTC
+    if df.index.tz is None:
+        df.index = df.index.tz_localize("UTC")
+    elif str(df.index.tz) != "UTC":
+        df.index = df.index.tz_convert("UTC")
+
+    # Set index name
+    df.index.name = "date"
+
+    return df
 
 
 class BaseSource(ABC):

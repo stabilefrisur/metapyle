@@ -10,7 +10,7 @@ import pandas as pd
 
 from metapyle.cache import Cache
 from metapyle.catalog import Catalog, CatalogEntry
-from metapyle.sources.base import FetchRequest, SourceRegistry, _global_registry, make_column_name
+from metapyle.sources.base import FetchRequest, SourceRegistry, _global_registry, make_column_name, normalize_dataframe
 
 __all__ = ["Client"]
 
@@ -393,12 +393,15 @@ class Client:
         if not dfs:
             return pd.DataFrame()
 
-        # Rename first column to my_name and concatenate
+        # Rename first column to my_name and normalize each DataFrame
         renamed: list[pd.DataFrame] = []
         for my_name, df in dfs.items():
             # Take first column regardless of name, rename to my_name
             col = df.columns[0]
-            renamed.append(df[[col]].rename(columns={col: my_name}))
+            df_renamed = df[[col]].rename(columns={col: my_name})
+            # Defensive normalization (sources should already normalize,
+            # but this ensures safe concat even with misbehaving sources)
+            renamed.append(normalize_dataframe(df_renamed))
 
         combined = pd.concat(renamed, axis=1)
 

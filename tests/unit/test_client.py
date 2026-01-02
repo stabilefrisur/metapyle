@@ -957,6 +957,40 @@ def test_frequency_and_unified_options_frequency_are_independent() -> None:
             assert result is not None
 
 
+class TestAssembleDataframeMixedTimezones:
+    """Tests for _assemble_dataframe handling mixed timezones."""
+
+    def test_concat_tz_naive_and_tz_aware(self, tmp_path: Path) -> None:
+        """Should successfully concat tz-naive and tz-aware DataFrames."""
+        # Create minimal catalog (list format required)
+        catalog_path = tmp_path / "catalog.yaml"
+        catalog_path.write_text("[]")
+
+        client = Client(catalog=catalog_path, cache_enabled=False)
+
+        # Simulate two DataFrames with different timezone handling
+        # (mimics a misbehaving source that returns tz-naive)
+        df_naive = pd.DataFrame(
+            {"col1": [1.0, 2.0]},
+            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
+        )
+        df_aware = pd.DataFrame(
+            {"col2": [3.0, 4.0]},
+            index=pd.to_datetime(["2024-01-01", "2024-01-02"]).tz_localize("UTC"),
+        )
+
+        dfs = {"series_a": df_naive, "series_b": df_aware}
+
+        # Should not raise - safety net normalizes before concat
+        result = client._assemble_dataframe(dfs, ["series_a", "series_b"])
+
+        assert list(result.columns) == ["series_a", "series_b"]
+        assert str(result.index.tz) == "UTC"
+        assert len(result) == 2
+
+        client.close()
+
+
 class TestClientUnifiedCache:
     """Tests for cache behavior with unified=True."""
 

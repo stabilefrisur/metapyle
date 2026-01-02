@@ -322,8 +322,28 @@ Metapyle validates your catalog on load:
 - **Missing required fields** → `CatalogValidationError`
 - **Duplicate `my_name`** → `DuplicateNameError`
 - **Unknown source** → `UnknownSourceError`
+- **Invalid source attributes** → `CatalogValidationError`
 
 If validation fails, you'll get a clear error message pointing to the problem.
+
+#### Source-Specific Attribute Rules
+
+Each source has specific rules about which attributes are required or forbidden:
+
+| Source | `field` | `path` | `params` |
+|--------|---------|--------|----------|
+| `bloomberg` | Required | Forbidden | — |
+| `gsquant` | Required | Forbidden | Optional |
+| `macrobond` | Forbidden | Forbidden | — |
+| `localfile` | Forbidden | Required | — |
+
+Examples of validation errors:
+
+```
+Macrobond entry 'us_gdp' has 'field' set, but macrobond does not use field. Remove it.
+Localfile entry 'sp500' requires 'path' but none provided.
+Bloomberg entry 'spx' has 'path' set, but bloomberg does not use path. Remove it.
+```
 
 ---
 
@@ -568,6 +588,21 @@ df = client.get(
     frequency="ME"  # pandas month-end frequency
 )
 ```
+
+### Stale Data Warnings
+
+When fetching fresh data (not from cache), metapyle checks if the actual data ends significantly before your requested end date. If the gap exceeds 1 business day, a warning is logged:
+
+```
+WARNING metapyle.client: stale_data: symbol=gdp_us, actual_end=2024-09-30, requested_end=2025-01-02, gap_bdays=67
+```
+
+This helps detect:
+- Delayed economic data (GDP, CPI often publish weeks after the period)
+- Discontinued or stale series
+- API issues returning incomplete data
+
+The warning only fires on fresh fetches—cached data doesn't trigger it since the original freshness isn't tracked.
 
 ---
 

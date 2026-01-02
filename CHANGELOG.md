@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Stale data warning when fetched data ends more than 1 business day before requested end date
+- Source-specific attribute validation at catalog load time (e.g., `field` required for Bloomberg, forbidden for Macrobond)
+
+### Fixed
+
+- Case-insensitive column matching for sources that normalize symbol case (e.g., Macrobond)
+
 ## [0.1.5] - 2026-01-01
 
 ### Changed

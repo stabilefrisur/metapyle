@@ -265,39 +265,31 @@ Use `lower_case_with_underscores` for `my_name`:
 ### Complete Example
 
 ```yaml
-# Equity indices
+# Bloomberg
 - my_name: sp500_close
   source: bloomberg
   symbol: SPX Index
   field: PX_LAST
-  description: S&P 500 closing price
-  unit: points
 
-- my_name: sp500_volume
-  source: bloomberg
-  symbol: SPX Index
-  field: PX_VOLUME
-  description: S&P 500 trading volume
-
-# Macro data from Bloomberg
+# Macrobond
 - my_name: us_gdp
-  source: bloomberg
-  symbol: GDP CUR$ Index
-  description: US GDP in current dollars
-  unit: USD billions
+  source: macrobond
+  symbol: usnaac0169
 
-- my_name: us_cpi_yoy
-  source: bloomberg
-  symbol: CPI YOY Index
-  description: US CPI year-over-year change
-  unit: percent
+# GS Quant
+- my_name: eurusd_vol
+  source: gsquant
+  symbol: EURUSD
+  field: FXIMPLIEDVOL::impliedVolatility
+  params:
+    tenor: 1m
+    deltaStrike: DN
 
-# Local file data
-- my_name: internal_forecast
+# Local file
+- my_name: gdp_forecast
   source: localfile
-  symbol: GDP_FORECAST       # column name in file
-  path: /data/forecasts.csv  # file path
-  description: Internal GDP forecast
+  symbol: GDP_FORECAST    # column name in the file
+  path: /data/macro.csv   # file path
 ```
 
 ### Organizing Large Catalogs

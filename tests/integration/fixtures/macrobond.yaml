@@ -15,3 +15,9 @@
   symbol: ih:mb:priv:xsa_spread_cmbs_bbb
   description: CMBS BBB spread
   unit: basis points
+
+- my_name: sp500_mb_mixed_case
+  source: macrobond
+  symbol: ih:bl:SPX Index
+  description: S&P 500 Index (mixed case test)
+  unit: points

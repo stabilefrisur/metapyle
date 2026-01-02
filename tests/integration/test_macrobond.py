@@ -138,6 +138,28 @@ class TestMacrobondCache:
         client.close()
 
 
+class TestMacrobondCaseFallback:
+    """Test case-insensitive column matching."""
+
+    def test_mixed_case_symbol(
+        self,
+        macrobond_client: Client,
+        test_start: str,
+        test_end: str,
+    ) -> None:
+        """Fetch with mixed-case symbol that Macrobond lowercases."""
+        df = macrobond_client.get(
+            ["sp500_mb_mixed_case"],
+            start=test_start,
+            end=test_end,
+        )
+
+        assert isinstance(df, pd.DataFrame)
+        assert not df.empty
+        assert "sp500_mb_mixed_case" in df.columns
+        assert isinstance(df.index, pd.DatetimeIndex)
+
+
 class TestMacrobondUnified:
     """Integration tests for unified series functionality."""
 

@@ -207,15 +207,25 @@ class Client:
                     unified_options=unified_options,
                 )
 
+                # Build case-insensitive lookup map for sources that normalize case
+                lower_to_actual = {col.lower(): col for col in result_df.columns}
+
                 # Split result and cache each column
                 for entry in group_entries:
                     # Try with field first (e.g., Bloomberg)
                     col_name = make_column_name(entry.symbol, entry.field)
 
-                    # Fallback to symbol-only if field column not found
+                    # Fallback 1: symbol-only if field column not found
                     # (e.g., Macrobond ignores field parameter)
                     if col_name not in result_df.columns:
                         col_name = make_column_name(entry.symbol, None)
+
+                    # Fallback 2: case-insensitive match
+                    # (e.g., Macrobond normalizes case in response)
+                    if col_name not in result_df.columns:
+                        actual_col = lower_to_actual.get(col_name.lower())
+                        if actual_col is not None:
+                            col_name = actual_col
 
                     if col_name in result_df.columns:
                         col_df = result_df[[col_name]]

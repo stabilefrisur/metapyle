@@ -288,6 +288,13 @@ class Catalog:
                         unit=row.get("unit") or None,
                         params=params,
                     )
+
+                    # Validate source-specific attributes
+                    attr_error = _validate_source_attributes(entry, path)
+                    if attr_error:
+                        errors.append(f"Row {row_num}: {attr_error}")
+                        continue
+
                     entries[my_name] = entry
 
         if errors:

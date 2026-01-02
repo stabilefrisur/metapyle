@@ -106,8 +106,8 @@ class TestFromCsvParams:
         """params column should be parsed as JSON dict."""
         csv_file = tmp_path / "catalog.csv"
         csv_file.write_text(
-            "my_name,source,symbol,params\n"
-            'test_entry,gsquant,AAPL,"{""interval"": ""1d"", ""limit"": 100}"\n'
+            "my_name,source,symbol,field,params\n"
+            'test_entry,gsquant,AAPL,DATASET::column,"{""interval"": ""1d"", ""limit"": 100}"\n'
         )
 
         catalog = Catalog.from_csv(str(csv_file))
@@ -118,7 +118,9 @@ class TestFromCsvParams:
     def test_from_csv_handles_empty_params(self, tmp_path: Path) -> None:
         """Empty params column should result in None."""
         csv_file = tmp_path / "catalog.csv"
-        csv_file.write_text("my_name,source,symbol,params\ntest_entry,localfile,value,\n")
+        csv_file.write_text(
+            "my_name,source,symbol,path,params\ntest_entry,localfile,value,/data/file.csv,\n"
+        )
 
         catalog = Catalog.from_csv(str(csv_file))
         entry = catalog.get("test_entry")
@@ -129,7 +131,7 @@ class TestFromCsvParams:
         """Invalid JSON in params column should raise CatalogValidationError."""
         csv_file = tmp_path / "catalog.csv"
         csv_file.write_text(
-            "my_name,source,symbol,params\ntest_entry,gsquant,AAPL,{not valid json}\n"
+            "my_name,source,symbol,field,params\ntest_entry,gsquant,AAPL,DATASET::col,{not valid json}\n"
         )
 
         with pytest.raises(CatalogValidationError, match="Invalid JSON in params"):
@@ -674,8 +676,8 @@ gdp_us,localfile,GDP_US,,/data/macro.csv,US GDP,USD billions
 
 def test_catalog_from_csv_accepts_string_path(tmp_path: Path) -> None:
     """Catalog.from_csv() accepts string path."""
-    csv_content = """my_name,source,symbol
-test_entry,bloomberg,TEST Index
+    csv_content = """my_name,source,symbol,field
+test_entry,bloomberg,TEST Index,PX_LAST
 """
     csv_file = tmp_path / "catalog.csv"
     csv_file.write_text(csv_content)
@@ -688,8 +690,9 @@ test_entry,bloomberg,TEST Index
 
 def test_catalog_from_csv_empty_optional_fields_are_none(tmp_path: Path) -> None:
     """Empty optional fields in CSV become None."""
+    # Use macrobond which doesn't require field or path
     csv_content = """my_name,source,symbol,field,path,description,unit
-test_entry,bloomberg,TEST Index,,,,
+test_entry,macrobond,usgdp,,,,
 """
     csv_file = tmp_path / "catalog.csv"
     csv_file.write_text(csv_content)
@@ -771,9 +774,10 @@ duplicate,localfile,TEST3
 def test_catalog_from_csv_whitespace_trimmed(tmp_path: Path) -> None:
     """from_csv() trims whitespace from all values."""
     # Note: spaces around values test trimming; no trailing whitespace in source
+    # Use macrobond which has no required attrs beyond my_name/source/symbol
     csv_content = (
         "my_name,source,symbol,description\n"
-        "  spaced_entry  ,  bloomberg  ,  SPX Index  ,  Has spaces  \n"
+        "  spaced_entry  ,  macrobond  ,  usgdp  ,  Has spaces  \n"
     )
     csv_file = tmp_path / "catalog.csv"
     csv_file.write_text(csv_content)
@@ -782,15 +786,15 @@ def test_catalog_from_csv_whitespace_trimmed(tmp_path: Path) -> None:
     entry = catalog.get("spaced_entry")
 
     assert entry.my_name == "spaced_entry"
-    assert entry.source == "bloomberg"
-    assert entry.symbol == "SPX Index"
+    assert entry.source == "macrobond"
+    assert entry.symbol == "usgdp"
     assert entry.description == "Has spaces"
 
 
 def test_catalog_from_csv_extra_columns_ignored(tmp_path: Path) -> None:
     """from_csv() ignores extra columns in CSV."""
-    csv_content = """my_name,source,symbol,notes,internal_id
-test_entry,bloomberg,TEST Index,some note,12345
+    csv_content = """my_name,source,symbol,field,notes,internal_id
+test_entry,bloomberg,TEST Index,PX_LAST,some note,12345
 """
     csv_file = tmp_path / "catalog.csv"
     csv_file.write_text(csv_content)
@@ -810,11 +814,11 @@ def test_catalog_from_csv_file_not_found() -> None:
 
 def test_catalog_from_csv_multiple_files(tmp_path: Path) -> None:
     """from_csv() loads and merges multiple CSV files."""
-    csv1 = """my_name,source,symbol
-entry1,bloomberg,TEST1
+    csv1 = """my_name,source,symbol,field
+entry1,bloomberg,TEST1,PX_LAST
 """
-    csv2 = """my_name,source,symbol
-entry2,localfile,TEST2
+    csv2 = """my_name,source,symbol,path
+entry2,localfile,TEST2,/data/file.csv
 """
     file1 = tmp_path / "catalog1.csv"
     file2 = tmp_path / "catalog2.csv"
@@ -850,11 +854,11 @@ duplicate,localfile,TEST2
 
 def test_catalog_from_csv_mixed_path_types(tmp_path: Path) -> None:
     """from_csv() accepts mixed str and Path in list."""
-    csv1 = """my_name,source,symbol
-entry1,bloomberg,TEST1
+    csv1 = """my_name,source,symbol,field
+entry1,bloomberg,TEST1,PX_LAST
 """
-    csv2 = """my_name,source,symbol
-entry2,localfile,TEST2
+    csv2 = """my_name,source,symbol,path
+entry2,localfile,TEST2,/data/file.csv
 """
     file1 = tmp_path / "catalog1.csv"
     file2 = tmp_path / "catalog2.csv"
@@ -1102,27 +1106,28 @@ class TestFromCsvSanitization:
     def test_from_csv_strips_column_whitespace(self, tmp_path: Path) -> None:
         """Column names with trailing whitespace should be handled."""
         csv_file = tmp_path / "catalog.csv"
-        # Note: columns have trailing spaces
-        csv_file.write_text("my_name , source , symbol \ntest_entry,localfile,value\n")
+        # Note: columns have trailing spaces; use macrobond which has no required attrs
+        csv_file.write_text("my_name , source , symbol \ntest_entry,macrobond,usgdp\n")
 
         catalog = Catalog.from_csv(str(csv_file))
         entry = catalog.get("test_entry")
 
         assert entry.my_name == "test_entry"
-        assert entry.source == "localfile"
-        assert entry.symbol == "value"
+        assert entry.source == "macrobond"
+        assert entry.symbol == "usgdp"
 
     def test_from_csv_strips_value_whitespace(self, tmp_path: Path) -> None:
         """Values with whitespace should be stripped."""
         csv_file = tmp_path / "catalog.csv"
-        csv_file.write_text("my_name,source,symbol\n test_entry , localfile , value \n")
+        # Use macrobond which has no required attrs
+        csv_file.write_text("my_name,source,symbol\n test_entry , macrobond , usgdp \n")
 
         catalog = Catalog.from_csv(str(csv_file))
         entry = catalog.get("test_entry")
 
         assert entry.my_name == "test_entry"
-        assert entry.source == "localfile"
-        assert entry.symbol == "value"
+        assert entry.source == "macrobond"
+        assert entry.symbol == "usgdp"
 
 
 def test_from_yaml_rejects_macrobond_with_field(tmp_path: Path) -> None:
@@ -1221,6 +1226,28 @@ def test_from_yaml_rejects_localfile_without_path(tmp_path: Path) -> None:
 
     with pytest.raises(CatalogValidationError, match="(?i)localfile.*requires.*path"):
         Catalog.from_yaml(catalog_file)
+
+
+def test_from_csv_collects_multiple_validation_errors(tmp_path: Path) -> None:
+    """CSV loader should report all validation errors at once."""
+    catalog_file = tmp_path / "catalog.csv"
+    catalog_file.write_text(
+        """my_name,source,symbol,field,path,description,unit
+us_gdp,macrobond,usgdp,bad_field,,,
+sp500,localfile,close,,,,
+"""
+    )
+
+    with pytest.raises(CatalogValidationError) as exc_info:
+        Catalog.from_csv(catalog_file)
+
+    error_msg = str(exc_info.value)
+    assert "2 error" in error_msg
+    # Error messages use capitalized source names
+    assert "Macrobond" in error_msg
+    assert "field" in error_msg
+    assert "Localfile" in error_msg
+    assert "path" in error_msg
 
 
 def test_catalog_yaml_to_csv_roundtrip(tmp_path: Path) -> None:

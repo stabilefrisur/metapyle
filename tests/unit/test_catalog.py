@@ -1141,6 +1141,88 @@ def test_from_yaml_rejects_macrobond_with_field(tmp_path: Path) -> None:
         Catalog.from_yaml(catalog_file)
 
 
+def test_from_yaml_rejects_macrobond_with_path(tmp_path: Path) -> None:
+    """Macrobond entries must not have path set."""
+    catalog_file = tmp_path / "catalog.yaml"
+    catalog_file.write_text(
+        """
+- my_name: us_gdp
+  source: macrobond
+  symbol: usgdp
+  path: /some/path.csv
+"""
+    )
+
+    with pytest.raises(CatalogValidationError, match="macrobond.*path"):
+        Catalog.from_yaml(catalog_file)
+
+
+def test_from_yaml_rejects_bloomberg_with_path(tmp_path: Path) -> None:
+    """Bloomberg entries must not have path set."""
+    catalog_file = tmp_path / "catalog.yaml"
+    catalog_file.write_text(
+        """
+- my_name: spx
+  source: bloomberg
+  symbol: SPX Index
+  field: PX_LAST
+  path: /some/path.csv
+"""
+    )
+
+    with pytest.raises(CatalogValidationError, match="bloomberg.*path"):
+        Catalog.from_yaml(catalog_file)
+
+
+def test_from_yaml_rejects_gsquant_with_path(tmp_path: Path) -> None:
+    """GSQuant entries must not have path set."""
+    catalog_file = tmp_path / "catalog.yaml"
+    catalog_file.write_text(
+        """
+- my_name: vol_data
+  source: gsquant
+  symbol: SPX
+  field: EDRVOL_PERCENT_STOCK_1M::impliedVolatility
+  path: /some/path.csv
+"""
+    )
+
+    with pytest.raises(CatalogValidationError, match="gsquant.*path"):
+        Catalog.from_yaml(catalog_file)
+
+
+def test_from_yaml_rejects_localfile_with_field(tmp_path: Path) -> None:
+    """Localfile entries must not have field set."""
+    catalog_file = tmp_path / "catalog.yaml"
+    catalog_file.write_text(
+        """
+- my_name: sp500
+  source: localfile
+  symbol: close
+  path: /data/prices.csv
+  field: should_not_be_here
+"""
+    )
+
+    with pytest.raises(CatalogValidationError, match="localfile.*field"):
+        Catalog.from_yaml(catalog_file)
+
+
+def test_from_yaml_rejects_localfile_without_path(tmp_path: Path) -> None:
+    """Localfile entries require path."""
+    catalog_file = tmp_path / "catalog.yaml"
+    catalog_file.write_text(
+        """
+- my_name: sp500
+  source: localfile
+  symbol: close
+"""
+    )
+
+    with pytest.raises(CatalogValidationError, match="(?i)localfile.*requires.*path"):
+        Catalog.from_yaml(catalog_file)
+
+
 def test_catalog_yaml_to_csv_roundtrip(tmp_path: Path) -> None:
     """Catalog loaded from YAML, exported to CSV, reloaded from CSV matches original."""
     # Create YAML with comprehensive test data:

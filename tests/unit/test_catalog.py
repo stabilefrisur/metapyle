@@ -173,9 +173,10 @@ class TestToYamlCleanOutput:
     def test_to_yaml_omits_none_fields(self, tmp_path: Path) -> None:
         """to_yaml should not include fields with None values."""
         # Entry with minimal fields (field, path, description, unit, params all None)
+        # Use macrobond which doesn't require field or path
         yaml_content = """
 - my_name: simple_entry
-  source: localfile
+  source: macrobond
   symbol: price
 """
         input_file = tmp_path / "input.yaml"
@@ -197,7 +198,7 @@ class TestToYamlCleanOutput:
 
         # Should contain required fields
         assert "my_name: simple_entry" in output_text
-        assert "source: localfile" in output_text
+        assert "source: macrobond" in output_text
         assert "symbol: price" in output_text
 
 
@@ -407,7 +408,8 @@ def test_catalog_load_duplicate_names(tmp_path: Path) -> None:
 
 - my_name: GDP_US
   source: localfile
-  symbol: /data/gdp.csv
+  symbol: gdp
+  path: /data/gdp.csv
 """
     yaml_file = tmp_path / "catalog.yaml"
     yaml_file.write_text(yaml_content)
@@ -453,7 +455,8 @@ def test_catalog_load_duplicate_across_files(tmp_path: Path) -> None:
     yaml2 = """
 - my_name: GDP_US
   source: localfile
-  symbol: /data/gdp.csv
+  symbol: gdp
+  path: /data/gdp.csv
 """
     file1 = tmp_path / "catalog1.yaml"
     file2 = tmp_path / "catalog2.yaml"
@@ -1120,6 +1123,22 @@ class TestFromCsvSanitization:
         assert entry.my_name == "test_entry"
         assert entry.source == "localfile"
         assert entry.symbol == "value"
+
+
+def test_from_yaml_rejects_macrobond_with_field(tmp_path: Path) -> None:
+    """Macrobond entries must not have field set."""
+    catalog_file = tmp_path / "catalog.yaml"
+    catalog_file.write_text(
+        """
+- my_name: us_gdp
+  source: macrobond
+  symbol: usgdp
+  field: should_not_be_here
+"""
+    )
+
+    with pytest.raises(CatalogValidationError, match="macrobond.*field"):
+        Catalog.from_yaml(catalog_file)
 
 
 def test_catalog_yaml_to_csv_roundtrip(tmp_path: Path) -> None:

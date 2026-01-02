@@ -4,6 +4,7 @@ import csv
 import json
 import logging
 from dataclasses import dataclass
+from enum import StrEnum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
 
@@ -30,6 +31,73 @@ _SOURCE_COLUMNS: dict[str, list[str]] = {
     "localfile": ["my_name", "source", "symbol", "path", "description", "unit"],
     "macrobond": ["my_name", "source", "symbol", "description", "unit"],
 }
+
+
+class _AttrRule(StrEnum):
+    """Validation rule for catalog entry attributes."""
+
+    REQUIRED = auto()
+    FORBIDDEN = auto()
+    ALLOWED = auto()
+
+
+_SOURCE_VALIDATION: dict[str, dict[str, _AttrRule]] = {
+    "bloomberg": {"field": _AttrRule.REQUIRED, "path": _AttrRule.FORBIDDEN},
+    "gsquant": {
+        "field": _AttrRule.REQUIRED,
+        "path": _AttrRule.FORBIDDEN,
+        "params": _AttrRule.ALLOWED,
+    },
+    "macrobond": {"field": _AttrRule.FORBIDDEN, "path": _AttrRule.FORBIDDEN},
+    "localfile": {"field": _AttrRule.FORBIDDEN, "path": _AttrRule.REQUIRED},
+}
+
+
+def _validate_source_attributes(
+    entry: "CatalogEntry",
+    source_file: str | Path,
+) -> str | None:
+    """
+    Validate entry attributes against source-specific rules.
+
+    Parameters
+    ----------
+    entry : CatalogEntry
+        The catalog entry to validate.
+    source_file : str | Path
+        Path to the catalog file (for error messages).
+
+    Returns
+    -------
+    str | None
+        Error message if validation fails, None if valid.
+        Unknown sources are not validated.
+    """
+    rules = _SOURCE_VALIDATION.get(entry.source)
+    if rules is None:
+        return None  # Unknown source - validated elsewhere
+
+    attr_values = {
+        "field": entry.field,
+        "path": entry.path,
+        "params": entry.params,
+    }
+
+    for attr, rule in rules.items():
+        value = attr_values.get(attr)
+
+        if rule == _AttrRule.REQUIRED and value is None:
+            return (
+                f"{entry.source.capitalize()} entry '{entry.my_name}' requires "
+                f"'{attr}' but none provided in {source_file}"
+            )
+        if rule == _AttrRule.FORBIDDEN and value is not None:
+            return (
+                f"{entry.source.capitalize()} entry '{entry.my_name}' has '{attr}' set, "
+                f"but {entry.source} does not use {attr}. Remove it. In {source_file}"
+            )
+
+    return None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -238,13 +306,7 @@ class Catalog:
             if field not in raw:
                 raise CatalogValidationError(f"Missing required field '{field}' in {source_file}")
 
-        # Bloomberg requires field
-        if raw["source"] == "bloomberg" and not raw.get("field"):
-            raise CatalogValidationError(
-                f"Bloomberg entry '{raw['my_name']}' requires 'field' (e.g., PX_LAST) in {source_file}"
-            )
-
-        return CatalogEntry(
+        entry = CatalogEntry(
             my_name=raw["my_name"],
             source=raw["source"],
             symbol=raw["symbol"],
@@ -254,6 +316,13 @@ class Catalog:
             unit=raw.get("unit"),
             params=raw.get("params"),
         )
+
+        # Validate source-specific attributes
+        error = _validate_source_attributes(entry, source_file)
+        if error:
+            raise CatalogValidationError(error)
+
+        return entry
 
     def get(self, name: str) -> CatalogEntry:
         """Get a catalog entry by name."""

@@ -236,6 +236,21 @@ class Client:
                     if col_name in result_df.columns:
                         col_df = result_df[[col_name]]
 
+                        # Check for stale data (actual end > 1 business day before requested)
+                        actual_end = col_df.index.max()
+                        # Ensure tz-naive comparison
+                        threshold = (pd.Timestamp(end) - pd.offsets.BDay(1)).tz_localize(None)
+                        actual_end_naive = actual_end.tz_localize(None) if actual_end.tzinfo else actual_end
+                        if actual_end_naive < threshold:
+                            gap_bdays = len(pd.bdate_range(actual_end_naive, threshold)) - 1 + 1  # +1 since threshold is already 1 BD behind
+                            logger.warning(
+                                "stale_data: symbol=%s, actual_end=%s, requested_end=%s, gap_bdays=%d",
+                                entry.my_name,
+                                actual_end.date().isoformat(),
+                                end,
+                                gap_bdays,
+                            )
+
                         # Cache the column (skip for unified macrobond - server-side transform)
                         skip_cache = unified and entry.source == "macrobond"
                         if use_cache and not skip_cache:

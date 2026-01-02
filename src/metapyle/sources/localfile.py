@@ -8,7 +8,7 @@ from typing import Any
 import pandas as pd
 
 from metapyle.exceptions import FetchError, NoDataError
-from metapyle.sources.base import BaseSource, FetchRequest, register_source
+from metapyle.sources.base import BaseSource, FetchRequest, normalize_dataframe, register_source
 
 __all__ = ["LocalFileSource"]
 
@@ -132,14 +132,7 @@ class LocalFileSource(BaseSource):
             )
             raise NoDataError(f"No data in date range {start} to {end}: {path}")
 
-        # Normalize index name
-        df_filtered.index.name = "date"
-
-        # Ensure UTC timezone
-        if df_filtered.index.tz is None:
-            df_filtered.index = df_filtered.index.tz_localize("UTC")
-        else:
-            df_filtered.index = df_filtered.index.tz_convert("UTC")
+        df_filtered = normalize_dataframe(df_filtered)
 
         logger.info(
             "fetch_complete: path=%s, symbols=%s, rows=%d",

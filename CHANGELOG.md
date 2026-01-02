@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-01-02
+
 ### Added
 
 - Stale data warning when fetched data ends more than 1 business day before requested end date
@@ -118,7 +120,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive type hints throughout (Python 3.12+)
 - User guide documentation
 
-[Unreleased]: https://github.com/stabilefrisur/metapyle/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/stabilefrisur/metapyle/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/stabilefrisur/metapyle/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/stabilefrisur/metapyle/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/stabilefrisur/metapyle/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/stabilefrisur/metapyle/compare/v0.1.2...v0.1.3

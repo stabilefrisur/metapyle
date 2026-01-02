@@ -240,9 +240,13 @@ class Client:
                         actual_end = col_df.index.max()
                         # Ensure tz-naive comparison
                         threshold = (pd.Timestamp(end) - pd.offsets.BDay(1)).tz_localize(None)
-                        actual_end_naive = actual_end.tz_localize(None) if actual_end.tzinfo else actual_end
+                        actual_end_naive = (
+                            actual_end.tz_localize(None) if actual_end.tzinfo else actual_end
+                        )
                         if actual_end_naive < threshold:
-                            gap_bdays = len(pd.bdate_range(actual_end_naive, threshold)) - 1 + 1  # +1 since threshold is already 1 BD behind
+                            gap_bdays = (
+                                len(pd.bdate_range(actual_end_naive, threshold)) - 1 + 1
+                            )  # +1 since threshold is already 1 BD behind
                             logger.warning(
                                 "stale_data: symbol=%s, actual_end=%s, requested_end=%s, gap_bdays=%d",
                                 entry.my_name,

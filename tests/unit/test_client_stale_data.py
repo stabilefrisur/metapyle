@@ -51,9 +51,7 @@ def stale_catalog(tmp_path):
 class TestStaleDataWarning:
     """Tests for stale data warning behavior."""
 
-    def test_no_warning_when_data_is_current(
-        self, stale_catalog, tmp_path, caplog
-    ):
+    def test_no_warning_when_data_is_current(self, stale_catalog, tmp_path, caplog):
         """No warning when data ends on the requested end date."""
         StaleTestSource.data_end_date = "2025-01-02"
 
@@ -71,9 +69,7 @@ class TestStaleDataWarning:
 
         assert "stale_data" not in caplog.text
 
-    def test_no_warning_for_one_business_day_gap(
-        self, stale_catalog, tmp_path, caplog
-    ):
+    def test_no_warning_for_one_business_day_gap(self, stale_catalog, tmp_path, caplog):
         """No warning when gap is exactly 1 business day (normal T+1)."""
         # Data ends Friday, request Monday → 1 business day gap
         StaleTestSource.data_end_date = "2025-01-03"  # Friday
@@ -92,9 +88,7 @@ class TestStaleDataWarning:
 
         assert "stale_data" not in caplog.text
 
-    def test_warning_for_two_business_day_gap(
-        self, stale_catalog, tmp_path, caplog
-    ):
+    def test_warning_for_two_business_day_gap(self, stale_catalog, tmp_path, caplog):
         """Warning when gap is 2+ business days."""
         # Data ends Thursday, request Monday → 2 business day gap
         StaleTestSource.data_end_date = "2025-01-02"  # Thursday
@@ -136,9 +130,7 @@ class TestStaleDataWarning:
 
         assert "stale_data" not in caplog.text
 
-    def test_multiple_symbols_mixed_freshness(
-        self, stale_catalog, tmp_path, caplog
-    ):
+    def test_multiple_symbols_mixed_freshness(self, stale_catalog, tmp_path, caplog):
         """Warning only for stale symbols when fetching multiple."""
         # Need a source that can return different end dates per symbol
         # For simplicity, use same end date but verify warning content

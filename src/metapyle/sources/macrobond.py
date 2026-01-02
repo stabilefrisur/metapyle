@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 
 from metapyle.exceptions import FetchError, NoDataError
-from metapyle.sources.base import BaseSource, FetchRequest, register_source
+from metapyle.sources.base import BaseSource, FetchRequest, normalize_dataframe, register_source
 
 __all__ = ["MacrobondSource"]
 
@@ -159,14 +159,7 @@ class MacrobondSource(BaseSource):
         mask = (result.index >= start_dt) & (result.index <= end_dt)
         result = result.loc[mask]
 
-        # Normalize index name
-        result.index.name = "date"
-
-        # Ensure UTC timezone
-        if result.index.tz is None:
-            result.index = result.index.tz_localize("UTC")
-        else:
-            result.index = result.index.tz_convert("UTC")
+        result = normalize_dataframe(result)
 
         if result.empty:
             logger.warning(
@@ -238,14 +231,7 @@ class MacrobondSource(BaseSource):
         if not isinstance(df.index, pd.DatetimeIndex):
             df.index = pd.to_datetime(df.index)
 
-        # Normalize index name
-        df.index.name = "date"
-
-        # Ensure UTC timezone
-        if df.index.tz is None:
-            df.index = df.index.tz_localize("UTC")
-        else:
-            df.index = df.index.tz_convert("UTC")
+        df = normalize_dataframe(df)
 
         logger.info(
             "fetch_complete: symbols=%s, rows=%d, mode=unified",

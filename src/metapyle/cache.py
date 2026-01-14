@@ -89,7 +89,7 @@ class Cache:
 
     def __init__(
         self,
-        path: str | None = None,
+        path: str | Path | None = None,
         *,
         enabled: bool = True,
     ) -> None:
@@ -101,7 +101,7 @@ class Cache:
             return
 
         if path is None:
-            path = os.environ.get("METAPYLE_CACHE_PATH", DEFAULT_CACHE_PATH)
+            path = Path(os.environ.get("METAPYLE_CACHE_PATH", DEFAULT_CACHE_PATH))
 
         self._path = path
         self._initialize_database()
@@ -158,7 +158,7 @@ class Cache:
         """)
 
         self._conn.commit()
-        logger.info("cache_initialized: path=%s", self._path)
+        logger.info("cache_initialized: path=%s", str(self._path))
 
     def put(
         self,

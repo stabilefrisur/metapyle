@@ -49,7 +49,7 @@ class Client:
         self,
         catalog: str | Path | list[str | Path],
         *,
-        cache_path: str | None = None,
+        cache_path: str | Path | None = None,
         cache_enabled: bool = True,
     ) -> None:
         self._registry: SourceRegistry = _global_registry

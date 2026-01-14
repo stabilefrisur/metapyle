@@ -456,7 +456,7 @@ class TestGSQuantIdType:
                 params={"id_type": "cusip"},
             )
 
-            df = source.fetch([request], "2024-01-01", "2024-01-01")
+            source.fetch([request], "2024-01-01", "2024-01-01")
 
         # Verify cusip was passed to get_data
         call_kwargs = mock_dataset_instance.get_data.call_args[1]
@@ -488,7 +488,7 @@ class TestGSQuantIdType:
                 # No id_type in params
             )
 
-            df = source.fetch([request], "2024-01-01", "2024-01-01")
+            source.fetch([request], "2024-01-01", "2024-01-01")
 
         # Verify assetId was used by default
         call_kwargs = mock_dataset_instance.get_data.call_args[1]

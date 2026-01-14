@@ -371,6 +371,12 @@ class Cache:
                 # Filter to requested range
                 start_dt = pd.Timestamp(start_date)
                 end_dt = pd.Timestamp(end_date)
+
+                # Handle timezone-aware indices
+                if isinstance(df.index, pd.DatetimeIndex) and df.index.tz is not None:
+                    start_dt = start_dt.tz_localize(df.index.tz)
+                    end_dt = end_dt.tz_localize(df.index.tz)
+
                 df = df[(df.index >= start_dt) & (df.index <= end_dt)]
 
             logger.debug(

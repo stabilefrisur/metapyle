@@ -105,7 +105,7 @@ class TestGSQuantFetch:
         mock_dataset_instance.get_data.return_value = pd.DataFrame(
             {
                 "date": pd.to_datetime(["2024-01-01", "2024-01-02"]),
-                "bbid": ["EURUSD", "EURUSD"],
+                "assetId": ["EURUSD", "EURUSD"],
                 "impliedVolatility": [0.08, 0.085],
             }
         )
@@ -136,7 +136,7 @@ class TestGSQuantFetch:
         mock_dataset_instance.get_data.return_value = pd.DataFrame(
             {
                 "date": pd.to_datetime(["2024-01-01"]),
-                "bbid": ["EURUSD"],
+                "assetId": ["EURUSD"],
                 "impliedVolatility": [0.08],
             }
         )
@@ -173,7 +173,7 @@ class TestGSQuantFetchBatch:
         mock_dataset_instance.get_data.return_value = pd.DataFrame(
             {
                 "date": pd.to_datetime(["2024-01-01", "2024-01-01", "2024-01-02", "2024-01-02"]),
-                "bbid": ["EURUSD", "USDJPY", "EURUSD", "USDJPY"],
+                "assetId": ["EURUSD", "USDJPY", "EURUSD", "USDJPY"],
                 "impliedVolatility": [0.08, 0.10, 0.085, 0.105],
             }
         )
@@ -194,7 +194,7 @@ class TestGSQuantFetchBatch:
         # Should make single API call with both symbols
         mock_dataset_class.assert_called_once_with("FXIMPLIEDVOL")
         call_kwargs = mock_dataset_instance.get_data.call_args[1]
-        assert set(call_kwargs["bbid"]) == {"EURUSD", "USDJPY"}
+        assert set(call_kwargs["assetId"]) == {"EURUSD", "USDJPY"}
 
         # Result should have both columns (with full field in name)
         assert "EURUSD::FXIMPLIEDVOL::impliedVolatility" in df.columns
@@ -210,7 +210,7 @@ class TestGSQuantFetchBatch:
                 return pd.DataFrame(
                     {
                         "date": pd.to_datetime(["2024-01-01"]),
-                        "bbid": ["EURUSD"],
+                        "assetId": ["EURUSD"],
                         "impliedVolatility": [0.08],
                     }
                 )
@@ -218,7 +218,7 @@ class TestGSQuantFetchBatch:
                 return pd.DataFrame(
                     {
                         "date": pd.to_datetime(["2024-01-01"]),
-                        "bbid": ["EURUSD"],
+                        "assetId": ["EURUSD"],
                         "spot": [1.10],
                     }
                 )
@@ -374,7 +374,7 @@ class TestGSQuantSourceKwargs:
         mock_dataset_instance.get_data.return_value = pd.DataFrame(
             {
                 "date": pd.to_datetime(["2024-01-01"]),
-                "bbid": ["EURUSD"],
+                "assetId": ["EURUSD"],
                 "impliedVolatility": [0.08],
             }
         )
@@ -390,3 +390,141 @@ class TestGSQuantSourceKwargs:
             df = source.fetch(requests, "2024-01-01", "2024-01-01", unified=True, currency="EUR")
 
             assert not df.empty
+
+
+class TestGSQuantIdType:
+    """Tests for id_type parameter handling."""
+
+    def test_fetch_with_explicit_id_type_bbid(self) -> None:
+        """fetch uses id_type from params when specified."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        mock_dataset_instance = MagicMock()
+        mock_dataset_instance.get_data.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01"]),
+                "bbid": ["SPX"],
+                "impliedVolatility": [0.15],
+            }
+        )
+
+        mock_dataset_class = MagicMock(return_value=mock_dataset_instance)
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": mock_dataset_class, "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            request = FetchRequest(
+                symbol="SPX",
+                field="FXIMPLIEDVOL::impliedVolatility",
+                params={"id_type": "bbid"},
+            )
+
+            df = source.fetch([request], "2024-01-01", "2024-01-01")
+
+        # Verify bbid was passed to get_data
+        call_kwargs = mock_dataset_instance.get_data.call_args[1]
+        assert "bbid" in call_kwargs
+        assert call_kwargs["bbid"] == ["SPX"]
+        assert "id_type" not in call_kwargs  # Should be popped
+
+        # Result column should exist
+        assert "SPX::FXIMPLIEDVOL::impliedVolatility" in df.columns
+
+    def test_fetch_with_id_type_cusip(self) -> None:
+        """fetch supports cusip as id_type."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        mock_dataset_instance = MagicMock()
+        mock_dataset_instance.get_data.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01"]),
+                "cusip": ["037833100"],
+                "closePrice": [185.50],
+            }
+        )
+
+        mock_dataset_class = MagicMock(return_value=mock_dataset_instance)
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": mock_dataset_class, "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            request = FetchRequest(
+                symbol="037833100",
+                field="TREOD::closePrice",
+                params={"id_type": "cusip"},
+            )
+
+            df = source.fetch([request], "2024-01-01", "2024-01-01")
+
+        # Verify cusip was passed to get_data
+        call_kwargs = mock_dataset_instance.get_data.call_args[1]
+        assert "cusip" in call_kwargs
+        assert call_kwargs["cusip"] == ["037833100"]
+
+    def test_fetch_default_id_type_is_assetId(self) -> None:
+        """fetch defaults to assetId when id_type not specified."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        mock_dataset_instance = MagicMock()
+        mock_dataset_instance.get_data.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01"]),
+                "assetId": ["MA4B66MW5E27UAL9SUX"],
+                "spread": [50.5],
+            }
+        )
+
+        mock_dataset_class = MagicMock(return_value=mock_dataset_instance)
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": mock_dataset_class, "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            request = FetchRequest(
+                symbol="MA4B66MW5E27UAL9SUX",
+                field="CDS_INDICES::spread",
+                # No id_type in params
+            )
+
+            df = source.fetch([request], "2024-01-01", "2024-01-01")
+
+        # Verify assetId was used by default
+        call_kwargs = mock_dataset_instance.get_data.call_args[1]
+        assert "assetId" in call_kwargs
+        assert call_kwargs["assetId"] == ["MA4B66MW5E27UAL9SUX"]
+
+    def test_fetch_id_type_with_other_params(self) -> None:
+        """fetch passes id_type alongside other params."""
+        from metapyle.sources.gsquant import GSQuantSource
+
+        mock_dataset_instance = MagicMock()
+        mock_dataset_instance.get_data.return_value = pd.DataFrame(
+            {
+                "date": pd.to_datetime(["2024-01-01"]),
+                "bbid": ["SPX"],
+                "atmVol": [0.18],
+            }
+        )
+
+        mock_dataset_class = MagicMock(return_value=mock_dataset_instance)
+
+        with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
+            mock_get.return_value = {"Dataset": mock_dataset_class, "GsSession": MagicMock()}
+
+            source = GSQuantSource()
+            request = FetchRequest(
+                symbol="SPX",
+                field="SWAPTION_VOL::atmVol",
+                params={"id_type": "bbid", "tenor": "1y", "expirationTenor": "1m"},
+            )
+
+            source.fetch([request], "2024-01-01", "2024-01-01")
+
+        # Verify bbid and other params were passed
+        call_kwargs = mock_dataset_instance.get_data.call_args[1]
+        assert call_kwargs["bbid"] == ["SPX"]
+        assert call_kwargs["tenor"] == "1y"
+        assert call_kwargs["expirationTenor"] == "1m"
+        assert "id_type" not in call_kwargs  # Should be popped

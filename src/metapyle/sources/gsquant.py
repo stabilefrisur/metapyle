@@ -188,6 +188,9 @@ class GSQuantSource(BaseSource):
                 if req.params:
                     merged_params.update(req.params)
 
+            # Extract id_type from params, default to assetId
+            id_type = merged_params.pop("id_type", "assetId")
+
             logger.debug(
                 "fetch_start: dataset=%s, symbols=%s, params=%s",
                 dataset_id,
@@ -197,7 +200,7 @@ class GSQuantSource(BaseSource):
 
             try:
                 ds = Dataset(dataset_id)
-                data = ds.get_data(start, end, bbid=symbols, **merged_params)
+                data = ds.get_data(start, end, **{id_type: symbols}, **merged_params)
             except (FetchError, NoDataError):
                 raise
             except Exception as e:
@@ -213,7 +216,7 @@ class GSQuantSource(BaseSource):
                 data,
                 values=value_column,
                 index=["date"],
-                columns=["bbid"],
+                columns=[id_type],
             )
 
             # Ensure DatetimeIndex

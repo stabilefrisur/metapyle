@@ -65,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - GS Quant data source via gs-quant integration (optional dependency)
   - Fetch data from GS Marquee platform using Bloomberg IDs (bbid)
-  - Field format `dataset_id::value_column` (e.g., `FXIMPLIEDVOL::impliedVolatility`)
+  - Field format `dataset_id::field_name` (e.g., `FXIMPLIEDVOL::impliedVolatility`)
   - Support for `params` field to pass additional query parameters (tenor, deltaStrike, etc.)
 - `params` field in `CatalogEntry` for source-specific parameters
 - `params` field in `FetchRequest` for passing parameters to source adapters

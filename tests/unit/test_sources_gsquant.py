@@ -58,22 +58,22 @@ class TestFieldParsing:
     """Tests for field parsing."""
 
     def test_parse_field_valid(self) -> None:
-        """_parse_field extracts dataset_id and value_column."""
+        """_parse_field extracts dataset_id and field_name."""
         from metapyle.sources.gsquant import _parse_field
 
-        dataset_id, value_column = _parse_field("FXIMPLIEDVOL::impliedVolatility")
+        dataset_id, field_name = _parse_field("FXIMPLIEDVOL::impliedVolatility")
 
         assert dataset_id == "FXIMPLIEDVOL"
-        assert value_column == "impliedVolatility"
+        assert field_name == "impliedVolatility"
 
     def test_parse_field_with_underscores(self) -> None:
         """_parse_field handles underscores in names."""
         from metapyle.sources.gsquant import _parse_field
 
-        dataset_id, value_column = _parse_field("S3_PARTNERS_EQUITY::dailyShortInterest")
+        dataset_id, field_name = _parse_field("S3_PARTNERS_EQUITY::dailyShortInterest")
 
         assert dataset_id == "S3_PARTNERS_EQUITY"
-        assert value_column == "dailyShortInterest"
+        assert field_name == "dailyShortInterest"
 
     def test_parse_field_missing_separator(self) -> None:
         """_parse_field raises ValueError if :: missing."""
@@ -282,8 +282,8 @@ class TestGSQuantFetchErrors:
             with pytest.raises(FetchError, match="Invalid field format"):
                 source.fetch([request], "2024-01-01", "2024-01-02")
 
-    def test_fetch_conflicting_value_columns(self) -> None:
-        """fetch raises FetchError if same dataset has different value columns."""
+    def test_fetch_conflicting_field_names(self) -> None:
+        """fetch raises FetchError if same dataset has different field names."""
         from metapyle.sources.gsquant import GSQuantSource
 
         with patch("metapyle.sources.gsquant._get_gsquant") as mock_get:
@@ -292,10 +292,10 @@ class TestGSQuantFetchErrors:
             source = GSQuantSource()
             requests = [
                 FetchRequest(symbol="EURUSD", field="FXIMPLIEDVOL::impliedVolatility"),
-                FetchRequest(symbol="USDJPY", field="FXIMPLIEDVOL::spot"),  # Different column!
+                FetchRequest(symbol="USDJPY", field="FXIMPLIEDVOL::spot"),  # Different field!
             ]
 
-            with pytest.raises(FetchError, match="different value columns"):
+            with pytest.raises(FetchError, match="different field names"):
                 source.fetch(requests, "2024-01-01", "2024-01-02")
 
     def test_fetch_api_error(self) -> None:

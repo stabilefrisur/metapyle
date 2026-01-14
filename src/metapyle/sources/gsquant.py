@@ -25,17 +25,17 @@ _gsquant_modules: dict[str, Any] = {}
 
 def _parse_field(field: str) -> tuple[str, str]:
     """
-    Parse field into dataset_id and value_column.
+    Parse field into dataset_id and field_name.
 
     Parameters
     ----------
     field : str
-        Field in format "dataset_id::value_column".
+        Field in format "dataset_id::field_name".
 
     Returns
     -------
     tuple[str, str]
-        (dataset_id, value_column)
+        (dataset_id, field_name)
 
     Raises
     ------
@@ -43,17 +43,17 @@ def _parse_field(field: str) -> tuple[str, str]:
         If field format is invalid.
     """
     if "::" not in field:
-        raise ValueError(f"Invalid field format: '{field}'. Expected 'dataset_id::value_column'")
+        raise ValueError(f"Invalid field format: '{field}'. Expected 'dataset_id::field_name'")
 
     parts = field.split("::", 1)
-    dataset_id, value_column = parts[0], parts[1]
+    dataset_id, field_name = parts[0], parts[1]
 
-    if not dataset_id or not value_column:
+    if not dataset_id or not field_name:
         raise ValueError(
-            f"Invalid field format: '{field}'. Both dataset_id and value_column required"
+            f"Invalid field format: '{field}'. Both dataset_id and field_name required"
         )
 
-    return dataset_id, value_column
+    return dataset_id, field_name
 
 
 def _get_gsquant() -> dict[str, Any]:
@@ -119,7 +119,7 @@ class GSQuantSource(BaseSource):
         Parameters
         ----------
         requests : Sequence[FetchRequest]
-            Fetch requests with field format "dataset_id::value_column".
+            Fetch requests with field format "dataset_id::field_name".
         start : str
             Start date in ISO format (YYYY-MM-DD).
         end : str
@@ -151,26 +151,26 @@ class GSQuantSource(BaseSource):
 
         # Group requests by dataset_id
         groups: dict[str, list[FetchRequest]] = {}
-        value_columns: dict[str, str] = {}
+        field_names: dict[str, str] = {}
 
         for req in requests:
             if not req.field:
                 raise FetchError(
-                    "gsquant source requires field in format 'dataset_id::value_column'"
+                    "gsquant source requires field in format 'dataset_id::field_name'"
                 )
 
             try:
-                dataset_id, value_column = _parse_field(req.field)
+                dataset_id, field_name = _parse_field(req.field)
             except ValueError as e:
                 raise FetchError(str(e)) from e
 
             if dataset_id not in groups:
                 groups[dataset_id] = []
-                value_columns[dataset_id] = value_column
-            elif value_columns[dataset_id] != value_column:
+                field_names[dataset_id] = field_name
+            elif field_names[dataset_id] != field_name:
                 raise FetchError(
-                    f"Cannot batch requests with different value columns for same dataset: "
-                    f"{value_columns[dataset_id]} vs {value_column}"
+                    f"Cannot batch requests with different field names for same dataset: "
+                    f"{field_names[dataset_id]} vs {field_name}"
                 )
 
             groups[dataset_id].append(req)
@@ -180,7 +180,7 @@ class GSQuantSource(BaseSource):
 
         for dataset_id, group_requests in groups.items():
             symbols = [req.symbol for req in group_requests]
-            value_column = value_columns[dataset_id]
+            field_name = field_names[dataset_id]
 
             # Merge params from all requests
             merged_params: dict[str, Any] = {}
@@ -214,7 +214,7 @@ class GSQuantSource(BaseSource):
             # Pivot to wide format
             pivoted = pd.pivot_table(
                 data,
-                values=value_column,
+                values=field_name,
                 index=["date"],
                 columns=[id_type],
             )
@@ -225,7 +225,7 @@ class GSQuantSource(BaseSource):
 
             # Rename columns to include field for uniqueness across datasets
             # Build a mapping from symbol to full column name
-            field_str = f"{dataset_id}::{value_column}"
+            field_str = f"{dataset_id}::{field_name}"
             rename_map = {symbol: make_column_name(symbol, field_str) for symbol in pivoted.columns}
             pivoted = pivoted.rename(columns=rename_map)
 

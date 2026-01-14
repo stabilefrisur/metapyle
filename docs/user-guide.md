@@ -889,7 +889,7 @@ Fetches data from GS Marquee platform via the `gs-quant` library.
 
 **Symbol format:** Asset identifier (format depends on `id_type` parameter)
 
-**Field format:** `dataset_id::value_column` (e.g., `FXIMPLIEDVOL::impliedVolatility`)
+**Field format:** `dataset_id::field_name` (e.g., `FXIMPLIEDVOL::impliedVolatility`)
 
 **Identifier Types:**
 

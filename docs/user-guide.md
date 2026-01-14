@@ -887,18 +887,55 @@ Fetches data from GS Marquee platform via the `gs-quant` library.
 **Requirements:**
 - GS Quant session authenticated (call `GsSession.use()` before fetching)
 
-**Symbol format:** Bloomberg ID (bbid) for the asset (e.g., `EURUSD`, `SPX`, `AAPL`)
+**Symbol format:** Asset identifier (format depends on `id_type` parameter)
 
 **Field format:** `dataset_id::value_column` (e.g., `FXIMPLIEDVOL::impliedVolatility`)
 
+**Identifier Types:**
+
+The `id_type` parameter in `params` specifies how to identify assets. Defaults to `assetId`.
+
+| ID Type | Description |
+|---------|-------------|
+| `assetId` | GS Marquee Asset ID (default) |
+| `bbid` | Bloomberg ID |
+| `gsid` | GS Internal ID |
+| `cusip` | CUSIP |
+| `isin` | ISIN |
+| `sedol` | SEDOL |
+| `ric` | Reuters Instrument Code |
+| `ticker` | Exchange ticker symbol |
+
+Browse available datasets and their supported identifiers at the [GS Marquee Data Catalog](https://marquee.gs.com/s/data-services/catalog).
+
+**Examples:**
+
 ```yaml
-- my_name: eurusd_vol
+# Using GS Marquee Asset ID (default)
+- my_name: cdx_ig_5y
   source: gsquant
-  symbol: EURUSD
-  field: FXIMPLIEDVOL::impliedVolatility
+  symbol: MANJG63BKCNEHYW3
+  field: CDS_INDICES_LEVELS_V1_INTERNAL::spread
   params:
-    tenor: 1m
-    deltaStrike: DN
+    id_type: assetId  # optional, this is the default
+
+# Using Bloomberg ID
+- my_name: itraxx_xover_5y
+  source: gsquant
+  symbol: ITRXEXE
+  field: CDS_INDICES_LEVELS_V1_INTERNAL::spread
+  params:
+    id_type: bbid
+
+# With additional query parameters
+- my_name: spx_swaption_vol
+  source: gsquant
+  symbol: SPX
+  field: SWAPTION_VOL::atmVol
+  params:
+    id_type: bbid
+    tenor: 1y
+    expirationTenor: 1m
 ```
 
 ### Local File (`localfile`)
